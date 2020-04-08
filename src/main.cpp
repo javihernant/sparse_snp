@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
-#include <sparse_snp.h>
+#include <sparse_snp.hpp>
 #include <math.h>
 
 int main(int argc, char* argv[])
@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
 	}
 		
 	if (argc>1) {
-		file = atoi(argv[1]);	
+		file = argv[1];	
 	}
 	
 	if (argc>2) {

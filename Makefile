@@ -28,16 +28,10 @@ NLDFlags= -lm -Xcompiler -fopenmp
 ############
 
 ############ Options for GPU and debugging
-ifeq ($(gpu),1)
-	OBJ += sparse_snp_gpu.o
-	XCC=$(NCC) 	
-	XLD=$(NLDFlags)
-	OBJ_LIB = sparse_snp_gpu.o
-else
-	OBJ += sparse_snp.o
-	XCC=$(CC)	
-	XLD=$(LDFlags)
-endif
+OBJ += sparse_snp.o
+XCC=$(NCC) 	
+XLD=$(NLDFlags)
+
 
 ifeq ($(dbg),1)
 	CFlags += -O0 -g
@@ -58,7 +52,7 @@ $(BIN): $(patsubst %,$(ODIR)/%,$(OBJ))
 	@mkdir -p $(BDIR)
 	$(XCC) $^ $(XLD) -o $(BDIR)/$@ 
 
-%.o: $(SDIR)/%.c
+%.o: $(SDIR)/%.cpp
 	@mkdir -p $(ODIR)
 	$(CC) $(CFlags) -I$(IDIR) -o $(ODIR)/$@ $<
 

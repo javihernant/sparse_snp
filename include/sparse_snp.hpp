@@ -11,19 +11,32 @@
 #define NO_DEBUG 0
 #define DEBUG    1
 
-typedef unsigned short int ushort;
-typedef unsigned int uint;
-typedef unsigned char uchar;
+typedef unsigned short int  ushort;
+typedef unsigned int        uint;
+typedef unsigned char       uchar;
 
-// typedef struct
-// {
-// // params of the simulation (CPU, GPU, ...)
-	
-// } SNP_PARAMS;
-
-
-typedef struct
+class SNP_model
 {
+public:
+    SNP_model(uint n, uint m);
+    ~SNP_model();
+    /** Add a rule to neuron nid, 
+     * regular expression defined by e_n and e_i, and a^c -> a^p.
+     * This must be called sorted by neuron */
+    void add_rule (uint nid, uchar e_n, uchar e_i, uchar c, uchar p);
+    /** Add synapse from neuron i to j. 
+     * This must be called after adding all rules */
+    void add_synapse (uint i, uint j);
+    /** Load the introduced model to the GPU.
+     * The status of model computation gets reset
+     */
+    void load_to_gpu();
+    /** Perform a step on the model. 
+     * Returns if no more steps can be done.
+     */
+    bool step();
+
+protected:
     uint n;                   // number of neurons
     uint m;                   // number of rules
 
@@ -44,9 +57,8 @@ typedef struct
     ushort * d_conf_vector;
     uchar  * d_trans_matrix;
     ushort * d_spiking_vector;
-    uint   * drule_index;      // indicates for each neuron, the starting rule index (# neurons+1)
-    
-} SNP_STRUCT;
+    uint   * d_rule_index;      // indicates for each neuron, the starting rule index (# neurons+1)
+};
 
 
 
