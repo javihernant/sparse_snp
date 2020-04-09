@@ -2,8 +2,14 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
-#include <sparse_snp.hpp>
+#include <snp_model.hpp>
 #include <math.h>
+
+// Algorithms
+#define CPU      		0
+#define GPU_CUBLAS 		1
+#define GPU_CUSPARSE 	2
+#define GPU_SPARSEREP 	3
 
 int main(int argc, char* argv[])
 {

@@ -4,12 +4,13 @@ LDIR = lib
 BDIR = bin
 IDIR = include
 
-CC=gcc
+CC=g++
 RM=rm
 
 OBJ = main.o
-OBJ_LIB = sparse_snp.o
+OBJ += snp_model.o snp_static.o
 BIN = ssnp
+#OBJ_LIB = snp_model.o
 #LIB = 
 
 CFlags=-c -Wall -fopenmp 
@@ -28,10 +29,8 @@ NLDFlags= -lm -Xcompiler -fopenmp
 ############
 
 ############ Options for GPU and debugging
-OBJ += sparse_snp.o
 XCC=$(NCC) 	
 XLD=$(NLDFlags)
-
 
 ifeq ($(dbg),1)
 	CFlags += -O0 -g
@@ -62,9 +61,3 @@ $(BIN): $(patsubst %,$(ODIR)/%,$(OBJ))
 
 clean:
 	$(RM) $(patsubst %,$(ODIR)/%,$(OBJ)) $(BDIR)/$(BIN) $(LDIR)/$(LIB)
-	
-# install:
-# 	@mkdir -p /usr/local/enps_rrt/include/enps_rrt/
-# 	@mkdir -p /usr/local/enps_rrt/lib/
-# 	@cp $(LDIR)/$(LIB) /usr/local/enps_rrt/lib/
-# 	@cp $(IDIR)/* /usr/local/enps_rrt/include/enps_rrt/
