@@ -11,16 +11,16 @@ using namespace std;
 SNP_model::SNP_model(uint n, uint m)
 {
     // allocation in CPU
-    this->n = n;
-    this->m = m;
-    this->conf_vector     = (ushort*) malloc(sizeof(ushort)*n);
-    this->spiking_vector  = (ushort*) malloc(sizeof(ushort)*m);
-    this->rule_index      = (uint*)   malloc(sizeof(uint)*(n+1));
-    this->rules.Ei        = (uchar*)  malloc(sizeof(uchar)*m);
-    this->rules.En        = (uchar*)  malloc(sizeof(uchar)*m);
-    this->rules.c         = (uchar*)  malloc(sizeof(uchar)*m);
-    this->rules.p         = (uchar*)  malloc(sizeof(uchar)*m);
-    this->rules.nid       = (uint*)   malloc(sizeof(uint)*(m));
+    this->n = n;  // number of neurons
+    this->m = m;  // number of rules
+    this->conf_vector     = (ushort*) malloc(sizeof(ushort)*n); // configuration vector (only one, we simulate just a computation)
+    this->spiking_vector  = (ushort*) malloc(sizeof(ushort)*m); // spiking vector
+    this->rule_index      = (uint*)   malloc(sizeof(uint)*(n+1)); // indeces of rules inside neuron (start index per neuron)
+    this->rules.Ei        = (uchar*)  malloc(sizeof(uchar)*m); // Regular expression Ei of a rule
+    this->rules.En        = (uchar*)  malloc(sizeof(uchar)*m); // Regular expression En of a rule
+    this->rules.c         = (uchar*)  malloc(sizeof(uchar)*m); // LHS of rule
+    this->rules.p         = (uchar*)  malloc(sizeof(uchar)*m); // RHS of rule
+    this->rules.nid       = (uint*)   malloc(sizeof(uint)*(m)); // Index of the neuron where the rule is
 
     // allocation in GPU
     cudaMalloc(&this->d_conf_vector,   sizeof(ushort)*n);
@@ -200,14 +200,14 @@ __global__ void kalc_spiking_vector(ushort* spiking_vector, ushort* conf_vector,
         uchar i = rei[r];
         uchar n = ren[r];
         ushort x = conf_vector[rnid[r]]; // map rule to neuron
-        spiking_vector[r] = (ushort) (i&(x==n)) || ((1-i)&(x>=n));
+        spiking_vector[r] = (ushort) (i&(x==n)) || ((1-i)&(x>=n)); // checking the regular expression
     }
 }
 
 void SNP_model::calc_spiking_vector() 
 {
     uint bs = 256;
-    uint gs = (m/256) + 1;
+    uint gs = (m+255)/256;
     
     kalc_spiking_vector<<<gs,bs>>>(d_spiking_vector, d_conf_vector, d_rules.nid, d_rules.Ei, d_rules.En, m);
     cudaDeviceSynchronize();

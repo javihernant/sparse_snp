@@ -13,6 +13,9 @@ protected:
     void include_synapse(uint i, uint j);
     void load_transition_matrix();
     void calc_transition();
+
+private:
+    void* cublas_handle;
 };
 
 /* TODO:

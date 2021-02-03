@@ -16,18 +16,22 @@ int main(int argc, char* argv[])
 	int n = 12;
 	char* file=NULL;
 	int algorithm = CPU;
-	int seed = time(NULL);
+	//int seed = time(NULL);
 
 	
 	if (argc==1) {
 		printf("SPARSESNP, a project to test sparse matrix representations of SNP on GPUs.\n");
 		printf("\nFormat: %s [i] [a]\n",argv[0]);
 		printf("Where: \n");
-		printf("\n[i] is the input file describing the SNP to be simulated (check format in help file of repository)\n");
+		//printf("\n[i] is the input file describing the SNP to be simulated (check format in help file of repository)\n");
+		printf("\n[i] is the example index:\n");
+		printf("\t1 = sorting network\n");
+		printf("\t2 = \n");
 		printf("\n[a] is the algorithm index\n");
-		printf("\t1 = CPU\n");
-		printf("\t2 = GPU lineal algebra\n");
-		printf("\t2 = GPU sparse representation\n");
+		printf("\t1 = CPU (not implemented yet)\n");
+		printf("\t1 = GPU lineal algebra CUBLAS\n");
+		printf("\t2 = GPU sparse representation CUSPARSE\n");
+		printf("\t3 = GPU sparse representation\n");
 		return 0;
 	}
 		
