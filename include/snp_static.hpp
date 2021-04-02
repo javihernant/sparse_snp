@@ -3,19 +3,17 @@
 
 #include "snp_model.hpp"
 
-class SNP_static_cublas: public SNP_model
+class SNP_static: public SNP_model
 {
 public:
-    SNP_static_cublas(uint n, uint m);
-    ~SNP_static_cublas();
+    SNP_static(uint n, uint m);
+    ~SNP_static();
 
 protected:
     void include_synapse(uint i, uint j);
     void load_transition_matrix();
     void calc_transition();
 
-private:
-    void* cublas_handle;
 };
 
 /* TODO:

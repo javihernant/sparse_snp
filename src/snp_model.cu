@@ -3,7 +3,7 @@
 #include <assert.h> //#define assert
 #include <cuda.h>
 
-#include <snp_model.hpp>
+#include <snp_model.hpp>  // "../include/snp_model.hpp" //
 
 using namespace std;
 
@@ -11,8 +11,8 @@ using namespace std;
 SNP_model::SNP_model(uint n, uint m)
 {
     // allocation in CPU
-    this->n = n;  // number of neurons
     this->m = m;  // number of rules
+    this->n = n;  // number of neurons
     this->conf_vector     = (ushort*) malloc(sizeof(ushort)*n); // configuration vector (only one, we simulate just a computation)
     this->spiking_vector  = (ushort*) malloc(sizeof(ushort)*m); // spiking vector
     this->rule_index      = (uint*)   malloc(sizeof(uint)*(n+1)); // indeces of rules inside neuron (start index per neuron)
@@ -55,7 +55,7 @@ SNP_model::~SNP_model()
 {
     free(this->conf_vector);
     free(this->spiking_vector);
-    if (this->trans_matrix) free(this->trans_matrix);
+    // if (this->trans_matrix) free(this->trans_matrix);
     free(this->rule_index);
     free(this->rules.Ei);
     free(this->rules.En);
@@ -65,7 +65,7 @@ SNP_model::~SNP_model()
 
     cudaFree(this->d_conf_vector);
     cudaFree(this->d_spiking_vector);
-    if (this->d_trans_matrix) cudaFree(this->d_trans_matrix);
+    // if (this->d_trans_matrix) cudaFree(this->d_trans_matrix);
     cudaFree(this->d_rule_index);
     cudaFree(this->d_rules.Ei);
     cudaFree(this->d_rules.En);
@@ -114,8 +114,9 @@ void SNP_model::add_rule (uint nid, uchar e_n, uchar e_i, uchar c, uchar p)
     if (rule_index[nid+1] == 0) // first rule in neuron
         rule_index[nid+1] = rule_index[nid] + 1; 
     else   // keep accumulation
-        rule_index[nid+1] = rule_index[nid+1] - rule_index[nid] + 1; 
+        rule_index[nid+1] = rule_index[nid] + rule_index[nid+1] - rule_index[nid] + 1; 
 
+ 
     uint rid = rule_index[nid+1]-1;
 
     rules.Ei[rid] = e_i;
@@ -131,9 +132,9 @@ void SNP_model::add_synapse (uint i, uint j)
 {
     //////////////////////////////////////////////////////
     // ensure parameters within limits
-    assert(i < n && j < n);
+    assert(i < n && j < n+1);
     // ensure all rules have been introduced already
-    assert(rule_index[n+1]==m);
+    assert(rule_index[n]==m);
     // SNP does not allow self-synapses
     assert(i!=j);
     done_rules = true; // from now on, no more rules can be added
@@ -177,8 +178,9 @@ void SNP_model::load_to_gpu ()
     cudaMemcpy(d_rules.c,       rules.c,        sizeof(uchar)*m,    cudaMemcpyHostToDevice);
     cudaMemcpy(d_rules.p,       rules.p,        sizeof(uchar)*m,    cudaMemcpyHostToDevice);
     cudaMemcpy(d_rules.nid,     rules.nid,      sizeof(uint)*m,     cudaMemcpyHostToDevice);
-
+    
     load_transition_matrix();
+    
 }
 
 void SNP_model::load_to_cpu ()
@@ -193,23 +195,33 @@ void SNP_model::load_to_cpu ()
     cudaMemcpy(conf_vector,     d_conf_vector,  sizeof(ushort)*n,   cudaMemcpyHostToDevice);
 }
 
-__global__ void kalc_spiking_vector(ushort* spiking_vector, ushort* conf_vector, uint* rnid, uchar* rei, uchar* ren, uint m)
+__global__ void kalc_spiking_vector(ushort* spiking_vector, ushort* conf_vector, uint* rule_index, uint* rnid, uchar* rei, uchar* ren, uint n)
 {
-    uint r = threadIdx.x+blockIdx.x*blockDim.x;
-    if (r<m) {
-        uchar i = rei[r];
-        uchar n = ren[r];
-        ushort x = conf_vector[rnid[r]]; // map rule to neuron
-        spiking_vector[r] = (ushort) (i&(x==n)) || ((1-i)&(x>=n)); // checking the regular expression
+    uint nid = threadIdx.x+blockIdx.x*blockDim.x;
+    if (nid<n) {
+        //vector<int> active_rule_idxs_ni;
+        for (int r=rule_index[nid]; r<rule_index[nid+1]; r++){
+            uchar i = rei[r];
+            uchar n = ren[r];
+            ushort x = conf_vector[rnid[r]];
+            if ((ushort) (i&(x==n)) || ((1-i)&(x>=n))){
+                //active_ridx.push_back(r);
+                spiking_vector[r] = 1;
+                break;
+            }
+        }
+        //get_random(active_rule_idxs_ni);
     }
 }
 
 void SNP_model::calc_spiking_vector() 
 {
     uint bs = 256;
-    uint gs = (m+255)/256;
+    uint gs = (n+255)/256;
     
-    kalc_spiking_vector<<<gs,bs>>>(d_spiking_vector, d_conf_vector, d_rules.nid, d_rules.Ei, d_rules.En, m);
+    kalc_spiking_vector<<<gs,bs>>>(d_spiking_vector, d_conf_vector, d_rule_index, d_rules.nid, d_rules.Ei, d_rules.En, n);
     cudaDeviceSynchronize();
+
+
 }
 

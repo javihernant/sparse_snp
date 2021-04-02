@@ -41,7 +41,8 @@ public:
      * Optionally, set a limit to l steps */
     void compute(int l=1) { while(l-->=0 || transition_step()); };
 
-protected:
+//protected:
+public:
     uint n;                   // number of neurons
     uint m;                   // number of rules
 
