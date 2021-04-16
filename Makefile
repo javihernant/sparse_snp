@@ -3,12 +3,13 @@ SDIR = src
 LDIR = lib
 BDIR = bin
 IDIR = include
+dbg=1
 
 CC=g++
 RM=rm
 
 OBJ=main.o
-OBJ+=snp_model.o snp_static.o snp_model_cpu.o snp_static_cpu.o
+OBJ+=snp_model.o snp_static.o snp_model_cpu.o snp_static_cpu.o snp_static_ell.o
 BIN=ssnp
 #OBJ_LIB = snp_model.o
 #LIB = 
@@ -36,6 +37,7 @@ NLDFlags=-lm -Xcompiler $(OMP) -L$(CUDA_PATH)/lib64
 ############ Options for GPU and debugging
 XCC=$(NCC) 	
 XLD=$(NLDFlags)
+
 
 ifeq ($(dbg),1)
 	CFlags += -O0 -g
@@ -65,4 +67,5 @@ $(BIN): $(patsubst %,$(ODIR)/%,$(OBJ))
 	$(NCC) $(NCFlags) -I$(IDIR) -o $(ODIR)/$@ $<
 
 clean:
-	$(RM) $(patsubst %,$(ODIR)/%,$(OBJ)) $(BDIR)/$(BIN) $(LDIR)/$(LIB)
+	$(RM) $(patsubst %,$(ODIR)/%,$(OBJ)) $(BDIR)/$(BIN) 
+	#$(LDIR)/$(LIB)

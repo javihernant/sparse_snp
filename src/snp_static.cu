@@ -74,17 +74,14 @@ void SNP_static::load_transition_matrix ()
 }*/
 
 
-__global__ void kalc_transition(ushort* spiking_vector, uchar* trans_matrix, ushort* conf_vector, int n, int m){
+__global__ void kalc_transition(ushort* spiking_vector, short* trans_matrix, short* conf_vector, int n, int m){
     int nid = threadIdx.x+blockIdx.x*blockDim.x;
     //nid<n
-    if (nid==0){
+    if (nid<n){
         for (int r=0; r<m; r++){
             conf_vector[nid] += spiking_vector[r] * trans_matrix[r*n+nid]; 
-            //printf("%d ",spiking_vector[r]);
-            printf("%d ",trans_matrix[r*n+nid]);
         }
-        printf("%d ",conf_vector[nid]);
-
+        // printf("%d ",conf_vector[nid]);
     }
 
 }

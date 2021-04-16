@@ -3,7 +3,7 @@
 #include <assert.h> //#define assert
 #include <cuda.h>
 
-#include <snp_model_cpu.hpp> 
+#include <snp_model.hpp> 
 
 using namespace std;
 

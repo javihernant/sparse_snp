@@ -5,7 +5,7 @@
 #include <cuda_runtime.h>
 
 
-#include <snp_static_cpu.hpp> //"../include/snp_static.hpp" // <snp_static.hpp> 
+#include <snp_static.hpp> //"../include/snp_static.hpp" // <snp_static.hpp> 
 
 using namespace std;
 

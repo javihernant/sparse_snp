@@ -7,39 +7,45 @@
 
 using namespace std;
 
+void checkErr(cudaError_t err) {
+    if (err != cudaSuccess) {
+        fprintf(stderr, "%s", cudaGetErrorString(err));
+    }
+}
+
 /** Allocation */
 SNP_model::SNP_model(uint n, uint m)
 {
     // allocation in CPU
     this->m = m;  // number of rules
     this->n = n;  // number of neurons
-    this->conf_vector     = (ushort*) malloc(sizeof(ushort)*n); // configuration vector (only one, we simulate just a computation)
+    this->conf_vector     = (short*) malloc(sizeof(short)*n); // configuration vector (only one, we simulate just a computation)
     this->spiking_vector  = (ushort*) malloc(sizeof(ushort)*m); // spiking vector
     this->rule_index      = (uint*)   malloc(sizeof(uint)*(n+1)); // indeces of rules inside neuron (start index per neuron)
-    this->rules.Ei        = (uchar*)  malloc(sizeof(uchar)*m); // Regular expression Ei of a rule
-    this->rules.En        = (uchar*)  malloc(sizeof(uchar)*m); // Regular expression En of a rule
-    this->rules.c         = (uchar*)  malloc(sizeof(uchar)*m); // LHS of rule
-    this->rules.p         = (uchar*)  malloc(sizeof(uchar)*m); // RHS of rule
+    this->rules.Ei        = (short*)  malloc(sizeof(short)*m); // Regular expression Ei of a rule
+    this->rules.En        = (short*)  malloc(sizeof(short)*m); // Regular expression En of a rule
+    this->rules.c         = (short*)  malloc(sizeof(short)*m); // LHS of rule
+    this->rules.p         = (short*)  malloc(sizeof(short)*m); // RHS of rule
     this->rules.nid       = (uint*)   malloc(sizeof(uint)*(m)); // Index of the neuron where the rule is
 
     // allocation in GPU
-    cudaMalloc(&this->d_conf_vector,   sizeof(ushort)*n);
+    cudaMalloc(&this->d_conf_vector,   sizeof(short)*n);
     cudaMalloc(&this->d_spiking_vector,sizeof(ushort)*m);
     cudaMalloc(&this->d_rule_index,    sizeof(uint)*(n+1));
-    cudaMalloc(&this->d_rules.Ei,      sizeof(uchar)*m);
-    cudaMalloc(&this->d_rules.En,      sizeof(uchar)*m);
-    cudaMalloc(&this->d_rules.c,       sizeof(uchar)*m);
-    cudaMalloc(&this->d_rules.p,       sizeof(uchar)*m);
+    cudaMalloc(&this->d_rules.Ei,      sizeof(short)*m);
+    cudaMalloc(&this->d_rules.En,      sizeof(short)*m);
+    cudaMalloc(&this->d_rules.c,       sizeof(short)*m);
+    cudaMalloc(&this->d_rules.p,       sizeof(short)*m);
     cudaMalloc(&this->d_rules.nid,     sizeof(uint)*m);
 
     // initialization (only in CPU, having updated version)
-    memset(this->conf_vector,   0,  sizeof(ushort)*n);
-    memset(this->spiking_vector,0,  sizeof(uint)*m);
+    memset(this->conf_vector,   0,  sizeof(short)*n);
+    memset(this->spiking_vector,0,  sizeof(ushort)*m);
     memset(this->rule_index,    0,  sizeof(uint)*(n+1));
-    memset(this->rules.Ei,      0,  sizeof(uchar)*m);
-    memset(this->rules.En,      0,  sizeof(uchar)*m);
-    memset(this->rules.c,       0,  sizeof(uchar)*m);
-    memset(this->rules.p,       0,  sizeof(uchar)*m);
+    memset(this->rules.Ei,      0,  sizeof(short)*m);
+    memset(this->rules.En,      0,  sizeof(short)*m);
+    memset(this->rules.c,       0,  sizeof(short)*m);
+    memset(this->rules.p,       0,  sizeof(short)*m);
     memset(this->rules.nid,     0,  sizeof(uint)*(m));
 
     this->d_trans_matrix=NULL;
@@ -170,7 +176,7 @@ void SNP_model::load_to_gpu ()
     gpu_updated = true;
     //////////////////////////////////////////////////////
 
-    cudaMemcpy(d_conf_vector,   conf_vector,    sizeof(ushort)*n,   cudaMemcpyHostToDevice);
+    cudaMemcpy(d_conf_vector,   conf_vector,    sizeof(short)*n,   cudaMemcpyHostToDevice);
     cudaMemcpy(d_spiking_vector,spiking_vector, sizeof(ushort)*m,   cudaMemcpyHostToDevice);
     cudaMemcpy(d_rule_index,    rule_index,     sizeof(uint)*(n+1), cudaMemcpyHostToDevice);
     cudaMemcpy(d_rules.Ei,      rules.Ei,       sizeof(uchar)*m,    cudaMemcpyHostToDevice);
@@ -191,11 +197,12 @@ void SNP_model::load_to_cpu ()
     if (cpu_updated) return;
     cpu_updated = true;
     //////////////////////////////////////////////////////
+    cudaError_t error;
 
-    cudaMemcpy(conf_vector,     d_conf_vector,  sizeof(ushort)*n,   cudaMemcpyHostToDevice);
+    cudaMemcpy(conf_vector, d_conf_vector,  sizeof(short)*n,   cudaMemcpyDeviceToHost);
 }
 
-__global__ void kalc_spiking_vector(ushort* spiking_vector, ushort* conf_vector, uint* rule_index, uint* rnid, uchar* rei, uchar* ren, uint n)
+__global__ void kalc_spiking_vector(ushort* spiking_vector, short* conf_vector, uint* rule_index, uint* rnid, short* rei, short* ren, uint n)
 {
     uint nid = threadIdx.x+blockIdx.x*blockDim.x;
     if (nid<n) {

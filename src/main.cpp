@@ -4,7 +4,6 @@
 #include <time.h>
 #include <snp_model.hpp> // "../include/snp_model.hpp" // <snp_model.hpp>
 #include <snp_static.hpp>
-#include <snp_static_cpu.hpp>
 #include <math.h>
 #include <iostream>
 
@@ -32,7 +31,7 @@ void testSNP_gpu(){
 	int m = 5; //num reglas
 	int n = 3; //num neuronas
 
-	SNP_static TestModel(n, m);
+	SNP_static_ell TestModel(n, m);
 	int C0[3] = {2,1,1};
 	for (int i=0; i<n; i++){
 		TestModel.set_spikes (i, C0[i]);
@@ -53,13 +52,13 @@ void testSNP_gpu(){
 	TestModel.add_synapse(1,2);
 	TestModel.add_synapse(2,n);
 
-	printMatx<ushort *>(TestModel.conf_vector,n,1);
+	printMatx<short *>(TestModel.conf_vector,n,1);
 	printMatx<short *>(TestModel.trans_matrix, n, m);
 	TestModel.transition_step(); 
 	TestModel.load_to_cpu ();
 
 	// printMatx<ushort *>(TestModel.spiking_vector,m,1);
-	printMatx<ushort *>(TestModel.conf_vector,n,1);
+	printMatx<short *>(TestModel.conf_vector,n,1);
 }
 
 void testSNP_cpu(){
@@ -101,7 +100,7 @@ int main(int argc, char* argv[])
 	//////////////////////
 	
 	testSNP_gpu();
-	//testSNP_cpu();
+	// testSNP_cpu();
 
 
 	/////////////////////
