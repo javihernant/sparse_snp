@@ -13,95 +13,218 @@
 #define GPU_CUSPARSE 	2
 #define GPU_SPARSEREP 	3
 
-template <typename T>
-void printMatx(T trans_matrix, int n, int m){
-	for (int i=0; i<m; i++){
-		
-		for (int j=0; j<n; j++){
-			std::cout << trans_matrix[i*n + j] << " ";
-		}
-		std::cout << "\n";
-	}
-	std::cout << "\n";
+
+
+// void testSNP_cpu(){
+// //Loading one SNP model
+// 	int m = 5; //num reglas
+// 	int n = 3; //num neuronas
+
+// 	SNP_static_cpu TestModel(n, m);
+// 	int C0[3] = {2,1,1};
+// 	for (int i=0; i<n; i++){
+// 		TestModel.set_spikes (i, C0[i]);
+// 	}
+
+// 	//add_rule (uint nid, uchar e_n, uchar e_i, uchar c, uchar p) 
+// 	TestModel.add_rule(0, 2, 1, 1, 1);
+// 	TestModel.add_rule(0, 2, 1, 2, 1);
+// 	TestModel.add_rule(1, 1, 1, 1, 1);
+// 	TestModel.add_rule(2, 1, 1, 1, 1);
+// 	TestModel.add_rule(2, 2, 1, 2, 0);
+
+// 	printMatx<uint *>(TestModel.rule_index,n+1,1);
+
+// 	TestModel.add_synapse(0,1);
+// 	TestModel.add_synapse(1,0);
+// 	TestModel.add_synapse(0,2);
+// 	TestModel.add_synapse(1,2);
+// 	TestModel.add_synapse(2,n);
+
+// 	printMatx<ushort *>(TestModel.conf_vector,n,1);
+// 	printMatx<short *>(TestModel.trans_matrix, n, m);
 	
+// 	TestModel.transition_step(); 
+// 	printMatx<ushort *>(TestModel.spiking_vector,m,1);
+// 	printMatx<ushort *>(TestModel.conf_vector,n,1);
+// }
+
+// void testSNP_gpu(){
+// 	//TODO: Add one output neuron
+// 	//Loading one SNP model
+// 	int m = 5; //num reglas
+// 	int n = 3; //num neuronas
+
+// 	SNP_static_optimized TestModel(n, m);
+// 	int C0[3] = {2,1,1};
+// 	for (int i=0; i<n; i++){
+// 		TestModel.set_spikes (i, C0[i]);
+// 	}
+
+// 	//add_rule (uint nid, uchar e_n, uchar e_i, uchar c, uchar p) 
+// 	TestModel.add_rule(0, 2, 1, 1, 1);
+// 	TestModel.add_rule(0, 2, 1, 2, 1);
+// 	TestModel.add_rule(1, 1, 1, 1, 1);
+// 	TestModel.add_rule(2, 1, 1, 1, 1);
+// 	TestModel.add_rule(2, 2, 1, 2, 0);
+
+// 	printMatx<uint *>(TestModel.rule_index,n+1,1);
+
+// 	TestModel.add_synapse(0,1);
+// 	TestModel.add_synapse(1,0);
+// 	TestModel.add_synapse(0,2);
+// 	TestModel.add_synapse(1,2);
+// 	TestModel.add_synapse(2,n);
+
+// 	//////////////////////////////////////////////////
+// 	for(int nid=0; nid<n; nid++){
+// 		printf("%d ", TestModel.get_spikes(nid));
+// 	}
+// 	printf("\n");
+// 	///////////////////////////////////////////////////
+
+// 	printMatx<short *>(TestModel.trans_matrix, n, m);
+	
+// 	TestModel.transition_step(); 
+	
+// 	// printMatx<ushort *>(TestModel.spiking_vector,m,1);
+	
+// 	//////////////////////////////////////////////////
+// 	for(int nid=0; nid<n; nid++){
+// 		printf("%d ", TestModel.get_spikes(nid));
+// 	}
+// 	printf("\n");
+// 	///////////////////////////////////////////////////
+	
+// }
+
+void testOrdenarNumsNormal(int* nums, int size){
+	int n= size*3; //number of neurons is number of numbers * 3 layers. 
+	int m = size + size*size; //each neuron in the first layer has one rule. Each neuron in the second layer has size (of the array of nums to be sorted) rules. There are "size" neurons in each layer (input, second, output).
+
+	SNP_static TestModel(n, m);
+	//set spikes of neurons in first layer and add their rules
+	for(int i=0; i<size; i++){
+		TestModel.set_spikes (i, nums[i]);
+		//add_rule (uint nid, uchar e_n, uchar e_i, uchar c, uchar p) 
+		TestModel.add_rule(i, 1, 0, 1, 1,0);	
+	}
+
+	int e_n_aux = size;
+	//add rules in neurons of 2nd layer
+	for(int j=size; j<size*2; j++){
+		for(int e_n=size; e_n>=1; e_n--){
+			if(e_n == e_n_aux){
+				TestModel.add_rule(j, e_n, 1, e_n, 1,0);
+			}else{
+				TestModel.add_rule(j, e_n, 1, e_n, 0,0);
+			}
+		}
+		e_n_aux--;
+	}
+
+	//Connect 1st 2nd and 3rd layers
+	for(int i=0; i<size; i++){
+		for(int j=size; j<size*2; j++){
+			TestModel.add_synapse(i,j);
+		}
+	}
+
+	e_n_aux = size;
+	for(int j=size; j<size*2; j++){
+		for(int offset=0; offset<e_n_aux; offset++){
+			TestModel.add_synapse(j,j+size+offset);
+
+		}
+		e_n_aux--;
+	
+	}
+	
+	printf("Initial conf_vector: ");
+	//////////////////////////////////////////////////
+	for(int nid=0; nid<n; nid++){
+		printf("%d ", TestModel.get_spikes(nid));
+	}
+	printf("\n\n");
+	///////////////////////////////////////////////////
+	
+	TestModel.compute(500); 
+	
+	// printMatx<ushort *>(TestModel.spiking_vector,m,1);
+	
+	//////////////////////////////////////////////////
+	for(int nid=0; nid<n; nid++){
+		printf("%d ", TestModel.get_spikes(nid));
+	}
+	printf("\n");
+	///////////////////////////////////////////////////
+
 }
 
-void testSNP_gpu(){
-//Loading one SNP model
-	int m = 5; //num reglas
-	int n = 3; //num neuronas
+// void testOrdenarNumsELL(){
+	
+// }
+
+// void testOrdenarNumsOptimized(){
+	
+// }
+
+void testDelaysSparse(){
+	
+	//Loading one SNP model
+	uint m = 5; //num reglas
+	uint n = 3; //num neuronas
 
 	SNP_static_ell TestModel(n, m);
-	int C0[3] = {2,1,1};
+	int C0[3] = {0,1,1};
 	for (int i=0; i<n; i++){
 		TestModel.set_spikes (i, C0[i]);
 	}
 
-	//add_rule (uint nid, uchar e_n, uchar e_i, uchar c, uchar p) 
-	TestModel.add_rule(0, 2, 1, 1, 1);
-	TestModel.add_rule(0, 2, 1, 2, 1);
-	TestModel.add_rule(1, 1, 1, 1, 1);
-	TestModel.add_rule(2, 1, 1, 1, 1);
-	TestModel.add_rule(2, 2, 1, 2, 0);
+	printf("Initial conf_vector: ");
 
-	printMatx<uint *>(TestModel.rule_index,n+1,1);
-
-	TestModel.add_synapse(0,1);
-	TestModel.add_synapse(1,0);
-	TestModel.add_synapse(0,2);
-	TestModel.add_synapse(1,2);
-	TestModel.add_synapse(2,n);
-
-	printMatx<short *>(TestModel.conf_vector,n,1);
-	printMatx<short *>(TestModel.trans_matrix, n, m);
-	TestModel.transition_step(); 
-	TestModel.load_to_cpu ();
-
-	// printMatx<ushort *>(TestModel.spiking_vector,m,1);
-	printMatx<short *>(TestModel.conf_vector,n,1);
-}
-
-void testSNP_cpu(){
-//Loading one SNP model
-	int m = 5; //num reglas
-	int n = 3; //num neuronas
-
-	SNP_static_cpu TestModel(n, m);
-	int C0[3] = {2,1,1};
-	for (int i=0; i<n; i++){
-		TestModel.set_spikes (i, C0[i]);
+	//////////////////////////////////////////////////
+	for(int nid=0; nid<n; nid++){
+		printf("%d ", TestModel.get_spikes(nid));
 	}
+	printf("\n----------------------------------\n");
+	///////////////////////////////////////////////////
 
-	//add_rule (uint nid, uchar e_n, uchar e_i, uchar c, uchar p) 
-	TestModel.add_rule(0, 2, 1, 1, 1);
-	TestModel.add_rule(0, 2, 1, 2, 1);
-	TestModel.add_rule(1, 1, 1, 1, 1);
-	TestModel.add_rule(2, 1, 1, 1, 1);
-	TestModel.add_rule(2, 2, 1, 2, 0);
+	//add_rule (uint nid, short e_n, short e_i, short c, short p, ushort d) 
+	TestModel.add_rule(0, 1, 1, 1, 1,0);
+	TestModel.add_rule(0, 2, 1, 2, 0,0);
+	TestModel.add_rule(1, 1, 1, 1, 1,0);
+	TestModel.add_rule(1, 1, 1, 1, 1, 1);
+	TestModel.add_rule(2, 1, 1, 1, 1,2);
 
-	printMatx<uint *>(TestModel.rule_index,n+1,1);
 
 	TestModel.add_synapse(0,1);
 	TestModel.add_synapse(1,0);
 	TestModel.add_synapse(0,2);
-	TestModel.add_synapse(1,2);
-	TestModel.add_synapse(2,n);
-
-	printMatx<ushort *>(TestModel.conf_vector,n,1);
-	printMatx<short *>(TestModel.trans_matrix, n, m);
+	TestModel.add_synapse(2,0);
 	
-	TestModel.transition_step(); 
-	printMatx<ushort *>(TestModel.spiking_vector,m,1);
-	printMatx<ushort *>(TestModel.conf_vector,n,1);
+
+	
+	TestModel.compute(4);
+	
+	
+
 }
+
 
 int main(int argc, char* argv[])
 {
 	//////////////////////
-	
-	testSNP_gpu();
+	testDelaysSparse();
+
+	// int size = 3;
+	// int nums[size] = {1,4,2};
+	// testOrdenarNumsNormal(nums,size);
+
+	//testSNP_gpu();
 	// testSNP_cpu();
 
+	
 
 	/////////////////////
 	

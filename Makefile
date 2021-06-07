@@ -9,7 +9,8 @@ CC=g++
 RM=rm
 
 OBJ=main.o
-OBJ+=snp_model.o snp_static.o snp_model_cpu.o snp_static_cpu.o snp_static_ell.o
+OBJ+=snp_model.o snp_static.o snp_static_ell.o
+#snp_model_cpu.o snp_static_cpu.o  snp_static_optimized.o
 BIN=ssnp
 #OBJ_LIB = snp_model.o
 #LIB = 
@@ -40,8 +41,8 @@ XLD=$(NLDFlags)
 
 
 ifeq ($(dbg),1)
-	CFlags += -O0 -g
-	NCFlags += -O0 -g
+	CFlags += -O0 -g 
+	NCFlags += -O0 -g -G
 else	
 	CFlags += -O3
 	NCFlags += -O3
