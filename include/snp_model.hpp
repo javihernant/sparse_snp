@@ -17,7 +17,7 @@ class SNP_model
 {
 public:
     
-    SNP_model(uint n, uint m);
+    SNP_model(uint n, uint m, int mode);
     ~SNP_model();
 
     /** 
@@ -49,14 +49,13 @@ public:
 
 protected:
     uint n;                   // number of neurons
-    
     uint m;                   // number of rules
     int z;                    //number of rows of trans_matrix_ell
-
+    int ex_mode;              //execution mode. SPARSE, ELL=1, OPTIMIZED=2
     // CPU part
     int * conf_vector;     // configuration vector (# neurons)
     short  * trans_matrix;   // transition matrix (# rules * # neurons), requires negative numbers
-    ushort * spiking_vector;  // spiking vector
+    int * spiking_vector;  // spiking vector
     
     int * delays_vector;  // #rules. Delays for each neuron. 
     int   * rule_index;      // indicates for each neuron, the starting rule index (# neurons+1)
@@ -76,7 +75,7 @@ protected:
     // GPU counterpart
     int * d_conf_vector;
     short  * d_trans_matrix;
-    ushort * d_spiking_vector;
+    int * d_spiking_vector;
     int * d_delays_vector;
     int   * d_rule_index;      // indicates for each neuron, the starting rule index (# neurons+1)
 

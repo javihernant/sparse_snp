@@ -9,8 +9,8 @@ CC=g++
 RM=rm
 
 OBJ=main.o
-OBJ+=snp_model.o snp_static.o snp_static_ell.o
-#snp_model_cpu.o snp_static_cpu.o  snp_static_optimized.o
+OBJ+=snp_model.o snp_static.o snp_static_ell.o snp_static_optimized.o
+#snp_model_cpu.o snp_static_cpu.o  
 BIN=ssnp
 #OBJ_LIB = snp_model.o
 #LIB = 

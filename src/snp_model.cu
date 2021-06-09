@@ -4,6 +4,13 @@
 #include <cuda.h>
 
 #include <snp_model.hpp>  // "../include/snp_model.hpp" //
+// Algorithms
+#define CPU      		0
+#define GPU_SPARSE		1
+#define GPU_ELL 		2
+#define GPU_OPTIMIZED	3
+#define GPU_CUBLAS 		4
+#define GPU_CUSPARSE 	5
 
 using namespace std;
 
@@ -15,12 +22,13 @@ void checkErr(cudaError_t err) {
 
 /** Allocation */
 
-SNP_model::SNP_model(uint n, uint m)
+SNP_model::SNP_model(uint n, uint m, int mode)
 {
     // allocation in CPU
     this->m = m;  // number of rules
     this->n = n;  // number of neurons
-    
+    this->ex_mode = mode;
+
     this->conf_vector     = (int*) malloc(sizeof(int)*n); // configuration vector (only one, we simulate just a computation)
     this->spiking_vector  = NULL; // spiking vector
     this->delays_vector = (int*) malloc(sizeof(int)*(n));
@@ -202,8 +210,9 @@ void SNP_model::calc_z(){
 
 void SNP_model::printAllVecs(){
 
+    int spv_size= ex_mode == GPU_OPTIMIZED ? n : m;
     printf("spiking_vector= ");
-    for(int i=0; i<m; i++){
+    for(int i=0; i<spv_size; i++){
         printf("{%d}",spiking_vector[i]);
     }
     printf("\n");
@@ -238,10 +247,25 @@ bool SNP_model::transition_step()
     }
     calc_spiking_vector(); //after this method is executed, an outdated version of spiking_vec and delay_vec is sent to host
 
+    int spv_size= ex_mode == GPU_OPTIMIZED ? n : m;
     
-    for(int i=0; i<m; i++){
+    
+
+    for(int i=0; i<spv_size; i++){
         // Check if at least one rule is active. If so, continue calculating (return false)
-        if(spiking_vector[i] != 0 || delays_vector[rules.nid[i]]>0){
+
+        bool calc_next_trans;
+        switch(ex_mode)
+        {
+        case (GPU_OPTIMIZED):
+            calc_next_trans = spiking_vector[i] != -1 || delays_vector[rules.nid[i]]>0;
+            break;
+        default:
+            calc_next_trans = spiking_vector[i] != 0 || delays_vector[rules.nid[i]]>0;
+            
+        }
+
+        if(calc_next_trans){
             calc_transition();
             load_to_cpu(); 
             printAllVecs();

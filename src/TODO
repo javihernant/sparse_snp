@@ -1,13 +1,11 @@
 -Releer el curso del dli.
 SNP_model:
--n_with_rules quitado. Arreglar rule_index. Si neurona i no tiene regla rule_index[i+1]=-1
--Para el paso de transicion, estudiar la posibilidad de que la matriz esté almacenada por columnas para facilitar la multiplicacion con el vector.
--Ahora la condicion de parada es que todas las neuronas que no son de salidas tengan 0 spikes. (Quizá) cambiar por comprobar spiking vector y ver que no se puedan ejecutar más reglas.
+
 SNP_static:
--implementar delays
+
 SNP_static_ell:
--hacer funcionar ejemplo ordenacion nums naturales
--implementar delays
+-mirar la trans_matrix en el ejemplo de ordenacion de numeros. Numeros raros
+
 SNP_static_optimized:
 -hacer funcionar ejemplo ordenacion nums naturales
 -implementar delays

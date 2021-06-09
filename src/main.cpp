@@ -9,9 +9,12 @@
 
 // Algorithms
 #define CPU      		0
-#define GPU_CUBLAS 		1
-#define GPU_CUSPARSE 	2
-#define GPU_SPARSEREP 	3
+#define GPU_SPARSE		1
+#define GPU_ELL 		2
+#define GPU_OPTIMIZED	3
+#define GPU_CUBLAS 		4
+#define GPU_CUSPARSE 	5
+
 
 
 
@@ -98,11 +101,11 @@
 	
 // }
 
-void testOrdenarNumsNormal(int* nums, int size){
+void testOrdenarNums(int* nums, int size){
 	int n= size*3; //number of neurons is number of numbers * 3 layers. 
 	int m = size + size*size; //each neuron in the first layer has one rule. Each neuron in the second layer has size (of the array of nums to be sorted) rules. There are "size" neurons in each layer (input, second, output).
 
-	SNP_static TestModel(n, m);
+	SNP_static_optimized TestModel(n, m, GPU_OPTIMIZED);
 	//set spikes of neurons in first layer and add their rules
 	for(int i=0; i<size; i++){
 		TestModel.set_spikes (i, nums[i]);
@@ -169,13 +172,13 @@ void testOrdenarNumsNormal(int* nums, int size){
 	
 // }
 
-void testDelaysSparse(){
+void testDelays(){
 	
 	//Loading one SNP model
 	uint m = 5; //num reglas
 	uint n = 3; //num neuronas
-
-	SNP_static_ell TestModel(n, m);
+	
+	SNP_static_optimized TestModel(n, m, GPU_OPTIMIZED);
 	int C0[3] = {0,1,1};
 	for (int i=0; i<n; i++){
 		TestModel.set_spikes (i, C0[i]);
@@ -215,11 +218,11 @@ void testDelaysSparse(){
 int main(int argc, char* argv[])
 {
 	//////////////////////
-	testDelaysSparse();
+	// testDelays();
 
-	// int size = 3;
-	// int nums[size] = {1,4,2};
-	// testOrdenarNumsNormal(nums,size);
+	int size = 3;
+	int nums[size] = {1,4,2};
+	testOrdenarNums(nums,size);
 
 	//testSNP_gpu();
 	// testSNP_cpu();
@@ -261,29 +264,29 @@ int main(int argc, char* argv[])
 
 	
 		
-	switch (algorithm)
-	{
-		case CPU:
+	// switch (algorithm)
+	// {
+	// 	case CPU:
 			
-			//init_params(MAP1,n,0.15,DEBUG,algorithm,&params);
-			//init_vars(8,10,&params,&vars);
-		break;
-		case GPU_CUBLAS:
-			//init_params(MAP2,n,0.15,DEBUG,algorithm,&params);
-			//init_vars(32,9.3,&params,&vars);
-		break;
-		case GPU_CUSPARSE:
-			//init_params(MAP3,n,0.15,DEBUG,algorithm,&params);
-			//init_vars(21.5,21.5,&params,&vars);
-		break;		
-		case GPU_SPARSEREP:
-			//init_params(MAP3,n,0.15,DEBUG,algorithm,&params);
-			//init_vars(21.5,21.5,&params,&vars);
-		break;		
-		default:
-			printf("Invalid algorithm\n");
-			return 0;
-	}
+	// 		//init_params(MAP1,n,0.15,DEBUG,algorithm,&params);
+	// 		//init_vars(8,10,&params,&vars);
+	// 	break;
+	// 	case GPU_CUBLAS:
+	// 		//init_params(MAP2,n,0.15,DEBUG,algorithm,&params);
+	// 		//init_vars(32,9.3,&params,&vars);
+	// 	break;
+	// 	case GPU_CUSPARSE:
+	// 		//init_params(MAP3,n,0.15,DEBUG,algorithm,&params);
+	// 		//init_vars(21.5,21.5,&params,&vars);
+	// 	break;		
+	// 	case GPU_SPARSEREP:
+	// 		//init_params(MAP3,n,0.15,DEBUG,algorithm,&params);
+	// 		//init_vars(21.5,21.5,&params,&vars);
+	// 	break;		
+	// 	default:
+	// 		printf("Invalid algorithm\n");
+	// 		return 0;
+	// }
 	
 	
 	

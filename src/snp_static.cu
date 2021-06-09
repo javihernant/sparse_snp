@@ -10,17 +10,17 @@
 using namespace std;
 
 /** Allocation */
-SNP_static::SNP_static(uint n, uint m) : SNP_model(n,m)
+SNP_static::SNP_static(uint n, uint m, int mode) : SNP_model(n,m,mode)
 {
     //Allocate cpu variables
-    this -> spiking_vector = (ushort*) malloc(sizeof(ushort)*m);
-    memset(this->spiking_vector,0,  sizeof(ushort)*m);
+    this -> spiking_vector = (int*) malloc(sizeof(int)*m);
+    memset(this->spiking_vector,0,  sizeof(int)*m);
 
     this->trans_matrix    = (short*)  malloc(sizeof(short)*n*m);
     memset(this->trans_matrix,0,sizeof(short)*n*m);
 
     //Allocate device variables
-    cudaMalloc((&this->d_spiking_vector),  sizeof(ushort)*m);
+    cudaMalloc((&this->d_spiking_vector),  sizeof(int)*m);
     cudaMalloc((&this->d_trans_matrix),  sizeof(short)*n*m);
     
 }
@@ -83,7 +83,7 @@ void SNP_static::load_transition_matrix ()
     if (threadIdx.x==0)
         w[n] = acum;
 }*/
-__global__ void kalc_spiking_vector(ushort* spiking_vector, int* delays_vector, ushort* rd, int* conf_vector, int* rule_index,short* rc, short* rei, short* ren, uint n)
+__global__ void kalc_spiking_vector(int* spiking_vector, int* delays_vector, ushort* rd, int* conf_vector, int* rule_index,short* rc, short* rei, short* ren, uint n)
 {
     uint nid = threadIdx.x+blockIdx.x*blockDim.x;
 
@@ -121,13 +121,13 @@ void SNP_static::calc_spiking_vector()
     cudaDeviceSynchronize();
 
     //send spiking_vector and delays_vector to host in order to decide if stop criterion has been reached
-    cudaMemcpy(spiking_vector, d_spiking_vector,  sizeof(ushort)*m, cudaMemcpyDeviceToHost);
+    cudaMemcpy(spiking_vector, d_spiking_vector,  sizeof(int)*m, cudaMemcpyDeviceToHost);
     cudaMemcpy(delays_vector, d_delays_vector,  sizeof(int)*n, cudaMemcpyDeviceToHost);
 
 
 }
 
-__global__ void kalc_transition(ushort* spiking_vector, short* trans_matrix, int* conf_vector,int * delays_vector, uint * rnid , int n, int m){
+__global__ void kalc_transition(int* spiking_vector, short* trans_matrix, int* conf_vector,int * delays_vector, uint * rnid , int n, int m){
     int nid = threadIdx.x+blockIdx.x*blockDim.x;
     //nid<n
     if (nid<n && delays_vector[nid]==0){

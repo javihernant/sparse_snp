@@ -6,7 +6,7 @@
 class SNP_static: public SNP_model
 {
 public:
-    SNP_static(uint n, uint m);
+    SNP_static(uint n, uint m, int mode);
     ~SNP_static();
     
 
@@ -23,7 +23,7 @@ protected:
 class SNP_static_ell: public SNP_model
 {
 public:
-    SNP_static_ell(uint n, uint m);
+    SNP_static_ell(uint n, uint m, int mode);
     ~SNP_static_ell();
 
 protected:
@@ -36,21 +36,21 @@ protected:
 
 };
 
-// class SNP_static_optimized: public SNP_model
-// {
-// public:
-//     SNP_static_optimized(uint n, uint m);
-//     ~SNP_static_optimized();
+class SNP_static_optimized: public SNP_model
+{
+public:
+    SNP_static_optimized(uint n, uint m, int mode);
+    ~SNP_static_optimized();
 
-// protected:
-//     void include_synapse(uint i, uint j);
-//     /* Calculates the spiking vector with the current configuration */
-//     void calc_spiking_vector();
-//     void init_compressed_matrix();
-//     void load_transition_matrix();
-//     void calc_transition();
+protected:
+    void printTransMX();
+    void include_synapse(uint i, uint j);
+    /* Calculates the spiking vector with the current configuration */
+    void calc_spiking_vector();
+    void load_transition_matrix();
+    void calc_transition();
 
-// };
+};
 
 // class SNP_static_cpu: public SNP_model_cpu
 // {
