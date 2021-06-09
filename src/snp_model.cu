@@ -33,11 +33,11 @@ SNP_model::SNP_model(uint n, uint m, int mode)
     this->spiking_vector  = NULL; // spiking vector
     this->delays_vector = (int*) malloc(sizeof(int)*(n));
     this->rule_index      = (int*)   malloc(sizeof(int)*(n+1)); // indices of rules inside neuron (start index per neuron)
-    this->rules.Ei        = (short*)  malloc(sizeof(short)*m); // Regular expression Ei of a rule
-    this->rules.En        = (short*)  malloc(sizeof(short)*m); // Regular expression En of a rule
-    this->rules.c         = (short*)  malloc(sizeof(short)*m); // LHS of rule
-    this->rules.p         = (short*)  malloc(sizeof(short)*m); // RHS of rule
-    this->rules.d = (ushort*) malloc(sizeof(ushort)*(m));
+    this->rules.Ei        = (int*)  malloc(sizeof(int)*m); // Regular expression Ei of a rule
+    this->rules.En        = (int*)  malloc(sizeof(int)*m); // Regular expression En of a rule
+    this->rules.c         = (int*)  malloc(sizeof(int)*m); // LHS of rule
+    this->rules.p         = (int*)  malloc(sizeof(int)*m); // RHS of rule
+    this->rules.d = (uint*) malloc(sizeof(uint)*(m));
     this->rules.nid       = (uint*)   malloc(sizeof(uint)*(m)); // Index of the neuron where the rule is
 
     // initialization (only in CPU, having updated version)
@@ -46,11 +46,11 @@ SNP_model::SNP_model(uint n, uint m, int mode)
     memset(this->delays_vector,0,  sizeof(int)*n);
     memset(this->rule_index,    -1,  sizeof(int)*(n+1));
     rule_index[0]=0;
-    memset(this->rules.Ei,      0,  sizeof(short)*m);
-    memset(this->rules.En,      0,  sizeof(short)*m);
-    memset(this->rules.c,       0,  sizeof(short)*m);
-    memset(this->rules.p,       0,  sizeof(short)*m);
-    memset(this->rules.d,     0,  sizeof(ushort)*(m));
+    memset(this->rules.Ei,      0,  sizeof(int)*m);
+    memset(this->rules.En,      0,  sizeof(int)*m);
+    memset(this->rules.c,       0,  sizeof(int)*m);
+    memset(this->rules.p,       0,  sizeof(int)*m);
+    memset(this->rules.d,     0,  sizeof(uint)*(m));
     memset(this->rules.nid,     0,  sizeof(uint)*(m));
 
     this->d_trans_matrix=NULL;
@@ -61,11 +61,11 @@ SNP_model::SNP_model(uint n, uint m, int mode)
     // cudaMalloc(&this->d_spiking_vector,sizeof(ushort)*m);
     cudaMalloc(&this->d_delays_vector,sizeof(int)*n);
     cudaMalloc(&this->d_rule_index,    sizeof(int)*(n+1));
-    cudaMalloc(&this->d_rules.Ei,      sizeof(short)*m);
-    cudaMalloc(&this->d_rules.En,      sizeof(short)*m);
-    cudaMalloc(&this->d_rules.c,       sizeof(short)*m);
-    cudaMalloc(&this->d_rules.p,       sizeof(short)*m);
-    cudaMalloc(&this->d_rules.d,       sizeof(ushort)*m);
+    cudaMalloc(&this->d_rules.Ei,      sizeof(int)*m);
+    cudaMalloc(&this->d_rules.En,      sizeof(int)*m);
+    cudaMalloc(&this->d_rules.c,       sizeof(int)*m);
+    cudaMalloc(&this->d_rules.p,       sizeof(int)*m);
+    cudaMalloc(&this->d_rules.d,       sizeof(uint)*m);
     cudaMalloc(&this->d_rules.nid,     sizeof(uint)*m);
 
     
@@ -103,7 +103,7 @@ SNP_model::~SNP_model()
     cudaFree(this->d_rules.nid);
 }
 
-void SNP_model::set_spikes (uint nid, ushort s)
+void SNP_model::set_spikes (uint nid, uint s)
 {
     //////////////////////////////////////////////////////
     assert(nid < n);
@@ -119,7 +119,7 @@ void SNP_model::set_spikes (uint nid, ushort s)
     conf_vector[nid] = s;    
 }
 
-ushort SNP_model::get_spikes (uint nid)
+uint SNP_model::get_spikes (uint nid)
 {
     //////////////////////////////////////////////////////
     assert(nid < n);
@@ -136,7 +136,7 @@ ushort SNP_model::get_spikes (uint nid)
 
 /** Add a rule to neuron nid, regular expression defined by e_n and e_i, and a^c -> a^p.
     Must be called sorted by neuron */
-void SNP_model::add_rule (uint nid, short e_n, short e_i, short c, short p, ushort d) 
+void SNP_model::add_rule (uint nid, int e_n, int e_i, int c, int p, uint d) 
 {
     //////////////////////////////////////////////////////
     assert(nid < n);
@@ -294,11 +294,11 @@ void SNP_model::load_to_gpu ()
     cudaMemcpy(d_conf_vector,   conf_vector,    sizeof(int)*n,   cudaMemcpyHostToDevice);
     // cudaMemcpy(d_spiking_vector,spiking_vector, sizeof(ushort)*m,   cudaMemcpyHostToDevice);
     cudaMemcpy(d_rule_index,    rule_index,     sizeof(int)*(n+1), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_rules.Ei,      rules.Ei,       sizeof(short)*m,    cudaMemcpyHostToDevice);
-    cudaMemcpy(d_rules.En,      rules.En,       sizeof(short)*m,    cudaMemcpyHostToDevice);
-    cudaMemcpy(d_rules.c,       rules.c,        sizeof(short)*m,    cudaMemcpyHostToDevice);
-    cudaMemcpy(d_rules.p,       rules.p,        sizeof(short)*m,    cudaMemcpyHostToDevice);
-    cudaMemcpy(d_rules.d,       rules.d,        sizeof(ushort)*m,    cudaMemcpyHostToDevice);
+    cudaMemcpy(d_rules.Ei,      rules.Ei,       sizeof(int)*m,    cudaMemcpyHostToDevice);
+    cudaMemcpy(d_rules.En,      rules.En,       sizeof(int)*m,    cudaMemcpyHostToDevice);
+    cudaMemcpy(d_rules.c,       rules.c,        sizeof(int)*m,    cudaMemcpyHostToDevice);
+    cudaMemcpy(d_rules.p,       rules.p,        sizeof(int)*m,    cudaMemcpyHostToDevice);
+    cudaMemcpy(d_rules.d,       rules.d,        sizeof(uint)*m,    cudaMemcpyHostToDevice);
     cudaMemcpy(d_rules.nid,     rules.nid,      sizeof(uint)*m,     cudaMemcpyHostToDevice);
     
     load_transition_matrix();

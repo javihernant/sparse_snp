@@ -212,7 +212,7 @@ int main(int argc, char* argv[])
 	//////////////////////
 	// testDelays();
 
-	int size = 100;
+	int size = 10;
 	int nums[size];
 	for (int i=size; i>0; i--){
 		nums[size-i]=i;

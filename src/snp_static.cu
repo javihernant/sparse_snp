@@ -16,12 +16,12 @@ SNP_static::SNP_static(uint n, uint m, int mode) : SNP_model(n,m,mode)
     this -> spiking_vector = (int*) malloc(sizeof(int)*m);
     memset(this->spiking_vector,0,  sizeof(int)*m);
 
-    this->trans_matrix    = (short*)  malloc(sizeof(short)*n*m);
-    memset(this->trans_matrix,0,sizeof(short)*n*m);
+    this->trans_matrix    = (int*)  malloc(sizeof(int)*n*m);
+    memset(this->trans_matrix,0,sizeof(int)*n*m);
 
     //Allocate device variables
     cudaMalloc((&this->d_spiking_vector),  sizeof(int)*m);
-    cudaMalloc((&this->d_trans_matrix),  sizeof(short)*n*m);
+    cudaMalloc((&this->d_trans_matrix),  sizeof(int)*n*m);
     
 }
 
@@ -60,7 +60,7 @@ void SNP_static::include_synapse(uint i, uint j)
 void SNP_static::load_transition_matrix () 
 {
 
-    cudaMemcpy(d_trans_matrix,  trans_matrix,   sizeof(short)*n*m,  cudaMemcpyHostToDevice); 
+    cudaMemcpy(d_trans_matrix,  trans_matrix,   sizeof(int)*n*m,  cudaMemcpyHostToDevice); 
 
     // TODO The following should be done in another function, but for simplicity I put it here
     // TODO check if we need to set matrices for spiking and configuration vectors
@@ -83,14 +83,14 @@ void SNP_static::load_transition_matrix ()
     if (threadIdx.x==0)
         w[n] = acum;
 }*/
-__global__ void kalc_spiking_vector(int* spiking_vector, int* delays_vector, ushort* rd, int* conf_vector, int* rule_index,short* rc, short* rei, short* ren, uint n)
+__global__ void kalc_spiking_vector(int* spiking_vector, int* delays_vector, uint* rd, int* conf_vector, int* rule_index,int* rc, int* rei, int* ren, uint n)
 {
     uint nid = threadIdx.x+blockIdx.x*blockDim.x;
 
     if (nid<n && delays_vector[nid]==0) {
 
         
-        for (uint r=rule_index[nid]; r<rule_index[nid+1]; r++){
+        for (int r=rule_index[nid]; r<rule_index[nid+1]; r++){
 
             uchar e_i = rei[r];
             uchar e_n = ren[r];
@@ -127,7 +127,7 @@ void SNP_static::calc_spiking_vector()
 
 }
 
-__global__ void kalc_transition(int* spiking_vector, short* trans_matrix, int* conf_vector,int * delays_vector, uint * rnid , int n, int m){
+__global__ void kalc_transition(int* spiking_vector, int* trans_matrix, int* conf_vector,int * delays_vector, uint * rnid , int n, int m){
     int nid = threadIdx.x+blockIdx.x*blockDim.x;
     //nid<n
     if (nid<n && delays_vector[nid]==0){
@@ -145,15 +145,22 @@ __global__ void kalc_transition(int* spiking_vector, short* trans_matrix, int* c
         // printf("%d ",conf_vector[nid]);
     }
 
+
+}
+
+__global__ void update_delays_vector_static(int * delays_vector, int n){
+    
+    int nid = threadIdx.x+blockIdx.x*blockDim.x;
     if(nid<n && delays_vector[nid]>0){
         delays_vector[nid]--;
     }
-
 }
 
 void SNP_static::calc_transition()
 {
     kalc_transition<<<n+255,256>>>(d_spiking_vector,d_trans_matrix, d_conf_vector, d_delays_vector, d_rules.nid,n,m);
+    cudaDeviceSynchronize();
+    update_delays_vector_static<<<n+255,256>>>(d_delays_vector, n);
     cudaDeviceSynchronize();
 
 }

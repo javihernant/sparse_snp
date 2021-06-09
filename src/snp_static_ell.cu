@@ -17,8 +17,8 @@ SNP_static_ell::SNP_static_ell(uint n, uint m, int mode) : SNP_model(n,m, mode)
     this -> spiking_vector = (int*) malloc(sizeof(int)*m);
     memset(this->spiking_vector,0,  sizeof(int)*m);
 
-    this->trans_matrix    = (short*)  malloc(sizeof(short)*n*m*2);
-    memset(this->trans_matrix,-1,sizeof(short)*n*m*2);
+    this->trans_matrix    = (int*)  malloc(sizeof(int)*n*m*2);
+    memset(this->trans_matrix,-1,sizeof(int)*n*m*2);
 
     this->z_vector    = (int*) malloc(sizeof(int)*m);
     memset(this->z_vector,0,sizeof(int)*m);
@@ -124,14 +124,14 @@ void SNP_static_ell::load_transition_matrix ()
     //handled by sublcasses
     init_compressed_matrix();
 
-    cudaMalloc((&this->d_trans_matrix),  sizeof(short)*z*m*2);
-    cudaMemcpy(d_trans_matrix,  trans_matrix,   sizeof(short)*z*m*2,  cudaMemcpyHostToDevice); 
+    cudaMalloc((&this->d_trans_matrix),  sizeof(int)*z*m*2);
+    cudaMemcpy(d_trans_matrix,  trans_matrix,   sizeof(int)*z*m*2,  cudaMemcpyHostToDevice); 
 
     // TODO The following should be done in another function, but for simplicity I put it here
     // TODO check if we need to set matrices for spiking and configuration vectors
 }
 
-__global__ void kalc_spiking_vector_ell(int* spiking_vector, int* delays_vector, int* conf_vector, int* rule_index, uint* rnid, short* rc, short* rei, short* ren, ushort* rd, uint n)
+__global__ void kalc_spiking_vector_ell(int* spiking_vector, int* delays_vector, int* conf_vector, int* rule_index, uint* rnid, int* rc, int* rei, int* ren, uint* rd, uint n)
 {
     uint nid = threadIdx.x+blockIdx.x*blockDim.x;
     if (nid<n && delays_vector[nid]==0) {
@@ -165,7 +165,7 @@ void SNP_static_ell::calc_spiking_vector()
 }
 
 
-__global__ void kalc_transition_ell(int* spiking_vector, short* trans_matrix, int* conf_vector, int * delays_vector, uint* rnid, int z, int m){
+__global__ void kalc_transition_ell(int* spiking_vector, int* trans_matrix, int* conf_vector, int * delays_vector, uint* rnid, int z, int m){
     int rid = threadIdx.x+blockIdx.x*blockDim.x;
     
     //nid<n
@@ -173,8 +173,8 @@ __global__ void kalc_transition_ell(int* spiking_vector, short* trans_matrix, in
     if (rid<m && spiking_vector[rid]>0 && delays_vector[rnid[rid]]==0){
         spiking_vector[rid] = 0;
         for(int i=0; i<z; i++){
-            short neuron = trans_matrix[m*2*i+rid*2];
-            short value = trans_matrix[m*2*i+rid*2+1];
+            int neuron = trans_matrix[m*2*i+rid*2];
+            int value = trans_matrix[m*2*i+rid*2+1];
             if(neuron==-1 && value==-1){
                 break;
             }

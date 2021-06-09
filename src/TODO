@@ -1,10 +1,10 @@
 -Releer el curso del dli.
-SNP_model:
 
 SNP_static:
 
 SNP_static_ell:
 -mirar la trans_matrix en el ejemplo de ordenacion de numeros. Numeros raros
+-arreglar corruption
 
 SNP_static_optimized:
 -hacer funcionar ejemplo ordenacion nums naturales
@@ -17,3 +17,15 @@ Herramientas utiles:
 -Medir tiempo ejecucion
     -nvprof
     -counters.timer (en código) 
+
+################################
+Prueba ordenacion:
+SPARSE:
+    100 numeros FAIL
+ELL:
+    100 numeros OK
+
+OPTIMIzed:
+    100 numeros OK
+
+

@@ -14,11 +14,11 @@ using namespace std;
 SNP_static_optimized::SNP_static_optimized(uint n, uint m, int mode) : SNP_model(n,m, mode)
 {
     //Allocate cpu variables
-    this -> spiking_vector = (int*) malloc(sizeof(ushort)*n);
+    this -> spiking_vector = (int*) malloc(sizeof(int)*n);
     //if no rule selected for the current computation, spiking_vector[i]=-1 for neuron i
     memset(this->spiking_vector,-1,  sizeof(int)*n); 
-    this->trans_matrix    = (short*)  malloc(sizeof(short)*n*n);
-    memset(this->trans_matrix,-1,sizeof(short)*n*n);
+    this->trans_matrix    = (int*)  malloc(sizeof(int)*n*n);
+    memset(this->trans_matrix,-1,sizeof(int)*n*n);
     this->z_vector    = (int*) malloc(sizeof(int)*n);
     memset(this->z_vector,0,sizeof(int)*n);
 
@@ -67,15 +67,15 @@ void SNP_static_optimized::load_transition_matrix ()
         }
     }
 
-    this-> trans_matrix = (short *) realloc(this->trans_matrix,sizeof(short)*n*z);
-    cudaMalloc((&this->d_trans_matrix),  sizeof(short)*n*z);
-    cudaMemcpy(d_trans_matrix,  trans_matrix,   sizeof(short)*n*z,  cudaMemcpyHostToDevice);
+    this-> trans_matrix = (int *) realloc(this->trans_matrix,sizeof(int)*n*z);
+    cudaMalloc((&this->d_trans_matrix),  sizeof(int)*n*z);
+    cudaMemcpy(d_trans_matrix,  trans_matrix,   sizeof(int)*n*z,  cudaMemcpyHostToDevice);
      
 
     // TODO check if we need to set matrices for spiking and configuration vectors
 }
 
-__global__ void kalc_spiking_vector_optimized(int* spiking_vector, int* conf_vector, int* delays_vector, int* rule_index,short* rc,ushort* rd,uint* rnid, short* rei, short* ren, uint n)
+__global__ void kalc_spiking_vector_optimized(int* spiking_vector, int* conf_vector, int* delays_vector, int* rule_index,int* rc,uint* rd,uint* rnid, int* rei, int* ren, uint n)
 {
     uint nid = threadIdx.x+blockIdx.x*blockDim.x;
     if (nid<n && delays_vector[nid]==0) {
@@ -110,7 +110,7 @@ void SNP_static_optimized::calc_spiking_vector()
 }
 
 
-__global__ void kalc_transition_optimized(int* spiking_vector, short* trans_matrix, int* conf_vector, int* delays_vector, short* rc, short* rp, int z, int n){
+__global__ void kalc_transition_optimized(int* spiking_vector, int* trans_matrix, int* conf_vector, int* delays_vector, int* rc, int* rp, int z, int n){
     int nid = threadIdx.x+blockIdx.x*blockDim.x;
 
     if(nid<n && delays_vector[nid]==0){
@@ -119,7 +119,7 @@ __global__ void kalc_transition_optimized(int* spiking_vector, short* trans_matr
         int c = rc[rid];
         int p = rp[rid];
 
-        printf("nid:%d, rid:%d, c:%d, p:%d\n", nid, rid, c, p);
+        // printf("nid:%d, rid:%d, c:%d, p:%d\n", nid, rid, c, p);
 
         for(int j=0; j<z; j++){
             

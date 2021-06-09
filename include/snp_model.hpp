@@ -24,15 +24,15 @@ public:
      * Set a number of spikes, given by s, in the neuron nid.
      * This method should be used to create the initial configuration.
      * This replaces previous value in that neuron in the configuration */
-    void set_spikes (uint nid, ushort s);
+    void set_spikes (uint nid, uint s);
     /** 
      * Consult number of spikes in neuron nid. */
-    ushort get_spikes (uint nid);
+    uint get_spikes (uint nid);
     /** 
      * Add a rule to neuron nid, 
      * regular expression defined by e_n and e_i, and a^c -> a^p.
      * This must be called sorted by neuron, and before adding synapses */
-    void add_rule (uint nid, short e_n, short e_i, short c, short p, ushort d);
+    void add_rule (uint nid, int e_n, int e_i, int c, int p, uint d);
     /** 
      * Add synapse from neuron i to j. 
      * This must be called after adding all rules */
@@ -54,7 +54,7 @@ protected:
     int ex_mode;              //execution mode. SPARSE, ELL=1, OPTIMIZED=2
     // CPU part
     int * conf_vector;     // configuration vector (# neurons)
-    short  * trans_matrix;   // transition matrix (# rules * # neurons), requires negative numbers
+    int  * trans_matrix;   // transition matrix (# rules * # neurons), requires negative numbers
     int * spiking_vector;  // spiking vector
     
     int * delays_vector;  // #rules. Delays for each neuron. 
@@ -62,11 +62,11 @@ protected:
     int * z_vector;
 
     struct _rule {
-        short  * En;          // indicates for each rule, the regular expression multiplicity
-        short  * Ei;          // indicates for each rule, the regular expression type
-        short  * c;           // indicates for each rule, the LHS
-        short  * p;           // indicates for each rule, the RHS
-        ushort *d;              // indicates for each rule, the delay until it's fired
+        int  * En;          // indicates for each rule, the regular expression multiplicity
+        int  * Ei;          // indicates for each rule, the regular expression type
+        int  * c;           // indicates for each rule, the LHS
+        int  * p;           // indicates for each rule, the RHS
+        uint *d;              // indicates for each rule, the delay until it's fired
         uint   * nid;         // indicates for each rule, the corresponding neuron (#rules)
         
 
@@ -74,7 +74,7 @@ protected:
 
     // GPU counterpart
     int * d_conf_vector;
-    short  * d_trans_matrix;
+    int  * d_trans_matrix;
     int * d_spiking_vector;
     int * d_delays_vector;
     int   * d_rule_index;      // indicates for each neuron, the starting rule index (# neurons+1)
