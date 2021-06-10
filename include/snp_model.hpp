@@ -17,7 +17,7 @@ class SNP_model
 {
 public:
     
-    SNP_model(uint n, uint m, int mode);
+    SNP_model(uint n, uint m, int mode, bool debug);
     ~SNP_model();
 
     /** 
@@ -52,6 +52,7 @@ protected:
     uint m;                   // number of rules
     int z;                    //number of rows of trans_matrix_ell
     int ex_mode;              //execution mode. SPARSE, ELL=1, OPTIMIZED=2
+    bool debug;
     // CPU part
     int * conf_vector;     // configuration vector (# neurons)
     int  * trans_matrix;   // transition matrix (# rules * # neurons), requires negative numbers
@@ -87,7 +88,9 @@ protected:
     bool done_rules;            // true if all rules have been introduced (preventing adding synapses)
 
     // auxiliary methods
-    void printAllVecs();
+    void printSpikingV();
+    void printDelaysV();
+    void printConfV();
     /** 
      * Load the introduced model to the GPU.
      * The status of model computation gets reset */

@@ -22,12 +22,13 @@ void checkErr(cudaError_t err) {
 
 /** Allocation */
 
-SNP_model::SNP_model(uint n, uint m, int mode)
+SNP_model::SNP_model(uint n, uint m, int mode, bool debug)
 {
     // allocation in CPU
     this->m = m;  // number of rules
     this->n = n;  // number of neurons
     this->ex_mode = mode;
+    this->debug = debug;
 
     this->conf_vector     = (int*) malloc(sizeof(int)*n); // configuration vector (only one, we simulate just a computation)
     this->spiking_vector  = NULL; // spiking vector
@@ -208,27 +209,28 @@ void SNP_model::calc_z(){
     }
 }
 
-void SNP_model::printAllVecs(){
-
+void SNP_model::printSpikingV(){
     int spv_size= ex_mode == GPU_OPTIMIZED ? n : m;
     printf("spiking_vector= ");
     for(int i=0; i<spv_size; i++){
         printf("{%d}",spiking_vector[i]);
     }
     printf("\n");
+}
 
+void SNP_model::printDelaysV(){
     printf("delays_vector= "); 
     for(int i=0; i<n; i++){
         printf("{%d}",delays_vector[i]);
     }
     printf("\n");
+}
 
-
+void SNP_model::printConfV(){
     printf("conf_vector (after transition)= "); 
     for(int i=0; i< n; i++){
         printf("{%d}",conf_vector[i]);
     }
-    printf("\n---------------------------------------\n");
 }
 
 bool SNP_model::transition_step()
@@ -241,10 +243,11 @@ bool SNP_model::transition_step()
     cpu_updated = false;
     //////////////////////////////////////////////////////
     
-    if(!transMX_printed){
+    if(debug && !transMX_printed){
         printTransMX();
         transMX_printed = true;
     }
+   
     calc_spiking_vector(); //after this method is executed, an outdated version of spiking_vec and delay_vec is sent to host
 
     int spv_size= ex_mode == GPU_OPTIMIZED ? n : m;
@@ -268,11 +271,23 @@ bool SNP_model::transition_step()
         if(calc_next_trans){
             calc_transition();
             load_to_cpu(); 
-            printAllVecs();
+
+            if(debug){
+                printf("debug is on");
+                printSpikingV();
+                printDelaysV();
+                printConfV();
+                printf("\n---------------------------------------\n");
+            }
+            
+            
             
             return false;
         }
     }
+
+    printConfV();
+
 
     printf("\n\n");
 

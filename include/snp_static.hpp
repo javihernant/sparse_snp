@@ -6,7 +6,7 @@
 class SNP_static: public SNP_model
 {
 public:
-    SNP_static(uint n, uint m, int mode);
+    SNP_static(uint n, uint m, int mode, bool debug);
     ~SNP_static();
     
 
@@ -23,7 +23,7 @@ protected:
 class SNP_static_ell: public SNP_model
 {
 public:
-    SNP_static_ell(uint n, uint m, int mode);
+    SNP_static_ell(uint n, uint m, int mode, bool debug);
     ~SNP_static_ell();
 
 protected:
@@ -39,7 +39,7 @@ protected:
 class SNP_static_optimized: public SNP_model
 {
 public:
-    SNP_static_optimized(uint n, uint m, int mode);
+    SNP_static_optimized(uint n, uint m, int mode, bool debug);
     ~SNP_static_optimized();
 
 protected:

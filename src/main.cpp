@@ -101,11 +101,11 @@
 	
 // }
 
-void testOrdenarNums(int* nums, int size){
+void testOrdenarNums(int* nums, int size, bool debug){
 	int n= size*3; //number of neurons is number of numbers * 3 layers. 
 	int m = size + size*size; //each neuron in the first layer has one rule. Each neuron in the second layer has size (of the array of nums to be sorted) rules. There are "size" neurons in each layer (input, second, output).
 
-	SNP_static TestModel(n, m, GPU_SPARSE);
+	SNP_static_ell TestModel(n, m, GPU_ELL, debug);
 	//set spikes of neurons in first layer and add their rules
 	for(int i=0; i<size; i++){
 		TestModel.set_spikes (i, nums[i]);
@@ -164,13 +164,13 @@ void testOrdenarNums(int* nums, int size){
 	
 // }
 
-void testDelays(){
+void testDelays(bool debug){
 	
 	//Loading one SNP model
 	uint m = 5; //num reglas
 	uint n = 3; //num neuronas
 	
-	SNP_static_ell TestModel(n, m, GPU_ELL);
+	SNP_static_ell TestModel(n, m, GPU_ELL, debug);
 	int C0[3] = {0,1,1};
 	for (int i=0; i<n; i++){
 		TestModel.set_spikes (i, C0[i]);
@@ -211,13 +211,21 @@ int main(int argc, char* argv[])
 {
 	//////////////////////
 	// testDelays();
+	bool debug;
+	
+	for(int i=0; i<argc; i++){
+		if(argv[i] == "--debug=1") {
+			debug=true;
+        }
+	}
+	
 
-	int size = 100;
+	int size = 50;
 	int nums[size];
 	for (int i=size; i>0; i--){
 		nums[size-i]=i;
 	}
-	testOrdenarNums(nums,size);
+	testOrdenarNums(nums,size, debug);
 
 	//testSNP_gpu();
 	// testSNP_cpu();

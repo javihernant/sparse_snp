@@ -10,7 +10,7 @@
 using namespace std;
 
 /** Allocation */
-SNP_static::SNP_static(uint n, uint m, int mode) : SNP_model(n,m,mode)
+SNP_static::SNP_static(uint n, uint m, int mode, bool debug) : SNP_model(n,m, mode, debug)
 {
     //Allocate cpu variables
     this -> spiking_vector = (int*) malloc(sizeof(int)*m);
