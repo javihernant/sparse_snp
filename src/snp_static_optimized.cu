@@ -116,7 +116,6 @@ __global__ void kalc_transition_optimized(int* spiking_vector, int* trans_matrix
     if(nid<n && delays_vector[nid]==0){
         int rid = spiking_vector[nid];
         spiking_vector[nid]= -1;
-        int c = rc[rid];
         int p = rp[rid];
 
         // printf("nid:%d, rid:%d, c:%d, p:%d\n", nid, rid, c, p);

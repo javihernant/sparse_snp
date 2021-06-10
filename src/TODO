@@ -21,7 +21,7 @@ Herramientas utiles:
 ################################
 Prueba ordenacion:
 SPARSE:
-    100 numeros FAIL
+    100 numeros FAIL(860m) OK(2080)
 ELL:
     100 numeros OK
 
