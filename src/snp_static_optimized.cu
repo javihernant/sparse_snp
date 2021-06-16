@@ -16,15 +16,15 @@ SNP_static_optimized::SNP_static_optimized(uint n, uint m, int mode, bool debug)
     //Allocate cpu variables
     this -> spiking_vector = (int*) malloc(sizeof(int)*n);
     //if no rule selected for the current computation, spiking_vector[i]=-1 for neuron i
-    memset(this->spiking_vector,-1,  sizeof(int)*n); 
     this->trans_matrix    = (int*)  malloc(sizeof(int)*n*n);
     memset(this->trans_matrix,-1,sizeof(int)*n*n);
     this->z_vector    = (int*) malloc(sizeof(int)*n);
     memset(this->z_vector,0,sizeof(int)*n);
 
     //Allocate device variables
-    cudaMalloc((&this->d_spiking_vector),  sizeof(int)*m);
-    cudaMemcpy(d_spiking_vector,spiking_vector, sizeof(int)*n, cudaMemcpyHostToDevice);
+    cudaMalloc((&this->d_spiking_vector),  sizeof(int)*n);
+    cudaMemset(&this->d_spiking_vector, -1, sizeof(int)*n);
+    
     //d_trans_matrix allocated when z is known
 
 }

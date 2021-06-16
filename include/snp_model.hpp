@@ -11,6 +11,7 @@ typedef unsigned char       uchar;
 
 #include <iostream>
 #include <utility>
+#include "cublas_v2.h"
 
 
 class SNP_model
@@ -81,6 +82,24 @@ protected:
     int   * d_rule_index;      // indicates for each neuron, the starting rule index (# neurons+1)
 
 
+
+    //////////////////////////////////////CUBLAS variables/////////////////////////////////////////////////
+    cublasHandle_t handle;
+    
+    float * cublas_conf_vector;     // configuration vector (# neurons)
+    float  * cublas_trans_matrix;   // transition matrix (# rules * # neurons), requires negative numbers
+    float * cublas_spiking_vector;  // spiking vector
+    
+
+    // GPU counterpart
+    float * d_cublas_conf_vector;
+    float * d_cublas_trans_matrix;
+    float * d_cublas_spiking_vector;
+    float * d_cublas_spiking_vector_aux;   //auxiliar spiking vector for use with cublas 
+    
+    //////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    
     // Consistency flags
     bool transMX_printed;
     bool gpu_updated;           // true if GPU copy is updated

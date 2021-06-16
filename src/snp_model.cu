@@ -213,7 +213,12 @@ void SNP_model::printSpikingV(){
     int spv_size= ex_mode == GPU_OPTIMIZED ? n : m;
     printf("spiking_vector= ");
     for(int i=0; i<spv_size; i++){
-        printf("{%d}",spiking_vector[i]);
+        if(ex_mode==GPU_CUBLAS){
+            printf("{%.1f}",cublas_spiking_vector[i]);
+        }else{
+            printf("{%d}",spiking_vector[i]);
+        }
+        
     }
     printf("\n");
 }
@@ -263,17 +268,22 @@ bool SNP_model::transition_step()
         case (GPU_OPTIMIZED):
             calc_next_trans = spiking_vector[i] != -1 || delays_vector[rules.nid[i]]>0;
             break;
+        case (GPU_CUBLAS):
+            calc_next_trans = cublas_spiking_vector[i] != 0 || delays_vector[rules.nid[i]]>0;
+            break;
         default:
             calc_next_trans = spiking_vector[i] != 0 || delays_vector[rules.nid[i]]>0;
             
         }
 
         if(calc_next_trans){
+            if(ex_mode == GPU_CUBLAS){
+                load_transition_matrix();
+            }
             calc_transition();
             load_to_cpu(); 
 
             if(debug){
-                printf("debug is on");
                 printSpikingV();
                 printDelaysV();
                 printConfV();
@@ -285,8 +295,10 @@ bool SNP_model::transition_step()
             return false;
         }
     }
-
+    printSpikingV();
+    printDelaysV();
     printConfV();
+    
 
 
     printf("\n\n");
@@ -306,6 +318,7 @@ void SNP_model::load_to_gpu ()
     gpu_updated = true;
     //////////////////////////////////////////////////////
 
+    // cublasGetVector (n , sizeof (* conf_vector ) , d_conf_vector ,1 ,conf_vector ,1);
     cudaMemcpy(d_conf_vector,   conf_vector,    sizeof(int)*n,   cudaMemcpyHostToDevice);
     // cudaMemcpy(d_spiking_vector,spiking_vector, sizeof(ushort)*m,   cudaMemcpyHostToDevice);
     cudaMemcpy(d_rule_index,    rule_index,     sizeof(int)*(n+1), cudaMemcpyHostToDevice);

@@ -52,6 +52,23 @@ protected:
 
 };
 
+class SNP_static_cublas: public SNP_model
+{
+public:
+    SNP_static_cublas(uint n, uint m, int mode, bool debug);
+    ~SNP_static_cublas();
+    
+
+protected:
+    void printTransMX();
+    void include_synapse(uint i, uint j);
+    /* Calculates the spiking vector with the current configuration */
+    void calc_spiking_vector();
+    void load_transition_matrix();
+    void calc_transition();
+
+};
+
 // class SNP_static_cpu: public SNP_model_cpu
 // {
 // public:

@@ -3,12 +3,10 @@
 SNP_static:
 
 SNP_static_ell:
--mirar la trans_matrix en el ejemplo de ordenacion de numeros. Numeros raros
--arreglar corruption
+
 
 SNP_static_optimized:
--hacer funcionar ejemplo ordenacion nums naturales
--implementar delays
+
 
 
 ##############################

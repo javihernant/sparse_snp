@@ -9,21 +9,22 @@ CC=g++
 RM=rm
 
 OBJ=main.o
-OBJ+=snp_model.o snp_static.o snp_static_ell.o snp_static_optimized.o
+OBJ+=snp_model.o snp_static.o snp_static_ell.o snp_static_optimized.o snp_static_cublas.o
 #snp_model_cpu.o snp_static_cpu.o  
 BIN=ssnp
 #OBJ_LIB = snp_model.o
-#LIB = 
+#LIB =  
 #OMP=-fopenmp
 
 CFlags=-c $(OMP) #-Wall
-LDFlags=-lm $(OMP)
+LDFlags=-lm -lcublas $(OMP) 
 
 ############ NVIDIA specifics
 CUDA_PATH=/usr/local/cuda
 
 NCC=nvcc -ccbin=$(CC)
 #GENCODE_SM20    := -gencode arch=compute_20,code=\"sm_20,compute_20\"
+#GENCODE_SM35    := -gencode arch=compute_35,code=\"sm_35,compute_35\"
 GENCODE_SM50    := -gencode arch=compute_50,code=\"sm_50,compute_50\"
 #GENCODE_SM60    := -gencode arch=compute_60,code=\"sm_60,compute_60\"
 #GENCODE_SM61    := -gencode arch=compute_61,code=\"sm_61,compute_61\"
@@ -32,7 +33,7 @@ GENCODE_FLAGS   := $(GENCODE_SM20) $(GENCODE_SM35) $(GENCODE_SM60)\
                    $(GENCODE_SM61) $(GENCODE_SM75) $(GENCODE_SM50)
 #NCFlags=-c --compiler-options -Wall -Xcompiler $(OMP) $(GENCODE_FLAGS)
 NCFlags=-c $(GENCODE_FLAGS) -I$(CUDA_PATH)/include 
-NLDFlags=-lm -Xcompiler $(OMP) -L$(CUDA_PATH)/lib64
+NLDFlags=-lm -lcublas -Xcompiler $(OMP) -L$(CUDA_PATH)/lib64
 ############
 
 ############ Options for GPU and debugging
