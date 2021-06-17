@@ -42,7 +42,7 @@ XLD=$(NLDFlags)
 
 
 ifeq ($(dbg),1)
-	CFlags += -O0 -g 
+	CFlags += -O0 -g
 	NCFlags += -O0 -g -G
 else	
 	CFlags += -O3

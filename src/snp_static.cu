@@ -21,7 +21,7 @@ SNP_static::SNP_static(uint n, uint m, int mode, bool debug) : SNP_model(n,m, mo
 
     //Allocate device variables
     cudaMalloc((&this->d_spiking_vector),  sizeof(int)*m);
-    cudaMemset(&this->d_spiking_vector, 0, sizeof(int)*m);
+    // cudaMemset((void * ) this->d_spiking_vector, 0, sizeof(int)*m);
     cudaMalloc((&this->d_trans_matrix),  sizeof(int)*n*m);
     
 }
