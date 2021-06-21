@@ -200,7 +200,7 @@ void testDelays(bool debug){
 	
 
 	
-	TestModel.compute(4);
+	TestModel.compute(5);
 	
 	
 
@@ -210,22 +210,22 @@ void testDelays(bool debug){
 int main(int argc, char* argv[])
 {
 	//////////////////////
-	// testDelays();
-	bool debug;
+	
+	bool debug = false;
 
 	if(argc>1 && strcmp(argv[1],"--debug=1")==0) {
 		printf("enabling debug");
 		debug=true;
     }
 	
-	
+	testDelays(debug);
 
-	int size = 10;
-	int nums[size];
-	for (int i=size; i>0; i--){
-		nums[size-i]=i;
-	}
-	testOrdenarNums(nums,size, debug);
+	// int size = 10;
+	// int nums[size];
+	// for (int i=size; i>0; i--){
+	// 	nums[size-i]=i;
+	// }
+	// testOrdenarNums(nums,size, debug);
 
 	//testSNP_gpu();
 	// testSNP_cpu();

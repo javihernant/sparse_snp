@@ -56,16 +56,24 @@ SNP_static_cublas::~SNP_static_cublas()
     cublasDestroy(handle);
 }
 
+__global__ void printMX(float * cublas_trans_matrix, int m, int n){
+
+    for (int j=0; j<m; j++){
+		
+		for (int i=0; i<n; i++){
+            printf("%.1f ",cublas_trans_matrix[i*m + j]);
+		}
+		printf("\n");
+	}
+	printf("\n");
+
+}
+
 void SNP_static_cublas::printTransMX()
 {
-    for (int i=0; i<m; i++){
-		
-		for (int j=0; j<n; j++){
-			std::cout << cublas_trans_matrix[i*n + j] << " ";
-		}
-		std::cout << "\n";
-	}
-	std::cout << "\n";
+    printMX<<<1,1>>>(d_cublas_trans_matrix,m,n);    
+    cudaDeviceSynchronize();
+    
 }
 
 void SNP_static_cublas::include_synapse(uint i, uint j)
@@ -104,11 +112,12 @@ void SNP_static_cublas::load_transition_matrix ()
     if (threadIdx.x==0)
         w[n] = acum;
 }*/
-__global__ void cublas_kalc_spiking_vector(float* spiking_vector, float* spiking_vector_aux, float* trans_matrix, int* delays_vector, uint* rd, float* conf_vector, int* rule_index,int* rc, int* rei, int* ren, uint n)
+__global__ void cublas_kalc_spiking_vector(float* spiking_vector, float* spiking_vector_aux, float* trans_matrix, int* delays_vector, uint* rd, float* conf_vector, int* rule_index,int* rc, int* rei, int* ren, uint n, uint m)
 {
     uint nid = threadIdx.x+blockIdx.x*blockDim.x;
-    bool rule_set;
+    
     if (nid<n) {
+        bool rule_set = false;
         for (int r=rule_index[nid]; r<rule_index[nid+1]; r++){
             uchar e_i = rei[r];
             uchar e_n = ren[r];
@@ -116,26 +125,41 @@ __global__ void cublas_kalc_spiking_vector(float* spiking_vector, float* spiking
 
             
             if (!rule_set && ((int) (e_i&(x==e_n)) || ((1-e_i)&(x>=e_n))) && delays_vector[nid]==0) {
-                printf("regla %d activada", r);
+                
                 spiking_vector[r] = 1;
                 conf_vector[nid]-=rc[r];
+                printf("%d spikes are retracted\n", rc[r]);
+                printf("conf_vector[%d]=%.1f\n", nid, conf_vector[nid]);
                 delays_vector[nid] = rd[r];
-
-                if(delays_vector[nid]>0){
-                    for(int j=0; j<n; j++){
-                        trans_matrix[r*n+j] = 0;
-    
-                    }
-                }
 
                 rule_set=true;
 
             }
 
+            
+            if(delays_vector[nid]>0){
+                //remember trans_matrix is being stored by columns
+                
+                for(int i=0; i<n; i++){
+                    trans_matrix[i*m+r] = 0;
+                }
+            }
+            
+            
+
             if(delays_vector[nid]==0 && spiking_vector[r]==1){
                 spiking_vector_aux[r] = 1;
                 
             }
+
+            
+        }
+
+        if(delays_vector[nid]>0){
+            for(int j=0; j<m; j++){
+                trans_matrix[nid*m+j] = 0;
+            }
+            
         }
 
             
@@ -148,18 +172,20 @@ __global__ void cublas_kalc_spiking_vector(float* spiking_vector, float* spiking
 
 void SNP_static_cublas::calc_spiking_vector() 
 {
+    cudaError_t error;
     uint bs = 256;
     uint gs = (n+255)/256;
     // checkErr2(cudaMemset((void *) &this->d_cublas_spiking_vector_aux, 0, sizeof(float)*m));
     thrust::device_ptr<float> dev_ptr(this->d_cublas_spiking_vector_aux);
     thrust::fill(dev_ptr, dev_ptr + n, 0.0f);
-    cublas_kalc_spiking_vector<<<gs,bs>>>(d_cublas_spiking_vector, d_cublas_spiking_vector_aux, d_cublas_trans_matrix, d_delays_vector, d_rules.d, d_cublas_conf_vector, d_rule_index,d_rules.c, d_rules.Ei, d_rules.En, n);
+    cublas_kalc_spiking_vector<<<gs,bs>>>(d_cublas_spiking_vector, d_cublas_spiking_vector_aux, d_cublas_trans_matrix, d_delays_vector, d_rules.d, d_cublas_conf_vector, d_rule_index,d_rules.c, d_rules.Ei, d_rules.En, n, m);
     cudaDeviceSynchronize();
 
     //send spiking_vector and delays_vector to host in order to decide if stop criterion has been reached
+    // checkErr2(cudaMemcpy(cublas_spiking_vector, d_cublas_spiking_vector,  sizeof(float)*m, cudaMemcpyDeviceToHost));
     cudaMemcpy(cublas_spiking_vector, d_cublas_spiking_vector,  sizeof(float)*m, cudaMemcpyDeviceToHost);
     cudaMemcpy(delays_vector, d_delays_vector,  sizeof(int)*n, cudaMemcpyDeviceToHost);
-
+    
 
 }
 

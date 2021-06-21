@@ -285,50 +285,65 @@ bool SNP_model::transition_step()
         printTransMX();
         transMX_printed = true;
     }
-   
+
     calc_spiking_vector(); //after this method is executed, an outdated version of spiking_vec and delay_vec is sent to host
+
+    if(debug && ex_mode==GPU_CUBLAS){
+        printTransMX();
+    }
 
     int spv_size= ex_mode == GPU_OPTIMIZED ? n : m;
     
     
-
+    bool calc_next_trans;
     for(int i=0; i<spv_size; i++){
         // Check if at least one rule is active. If so, continue calculating (return false)
 
-        bool calc_next_trans;
+        
         switch(ex_mode)
         {
-        case (GPU_OPTIMIZED):
-            calc_next_trans = spiking_vector[i] != -1 || delays_vector[rules.nid[i]]>0;
-            break;
-        case (GPU_CUBLAS):
-            calc_next_trans = cublas_spiking_vector[i] != 0 || delays_vector[rules.nid[i]]>0;
-            break;
-        default:
-            calc_next_trans = spiking_vector[i] != 0 || delays_vector[rules.nid[i]]>0;
+            case (GPU_OPTIMIZED):
+                calc_next_trans = spiking_vector[i] != -1 || delays_vector[rules.nid[i]]>0;
+                break;
+            case (GPU_CUBLAS):
+                calc_next_trans = cublas_spiking_vector[i] != 0 || delays_vector[rules.nid[i]]>0;
+                // printf("\ncalc_next: %d\n", calc_next_trans);
+                break;
+            default:
+                calc_next_trans = spiking_vector[i] != 0 || delays_vector[rules.nid[i]]>0;
             
         }
-
+        
         if(calc_next_trans){
-            if(ex_mode == GPU_CUBLAS){
-                load_transition_matrix();
-            }
-            calc_transition();
-            load_to_cpu(); 
-
-            if(debug){
-                printSpikingV();
-                printDelaysV();
-                printConfV();
-                printf("\n---------------------------------------\n");
-            }
-            
-            
-            
-            return false;
+            break;
         }
+        
+
     }
-    // printSpikingV();
+    
+    if(calc_next_trans){
+        
+        calc_transition();
+
+        if(ex_mode == GPU_CUBLAS){
+            load_transition_matrix();
+        }
+        
+
+        load_to_cpu(); 
+
+        if(debug){
+            printSpikingV();
+            printDelaysV();
+            printConfV();
+            printf("\n---------------------------------------\n");
+        }
+        
+        
+        
+        return false;
+    }
+    printSpikingV();
     // printDelaysV();
     printConfV();
     
