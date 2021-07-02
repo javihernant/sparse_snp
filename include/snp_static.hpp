@@ -2,6 +2,8 @@
 #define _SNP_MODEL_STATIC_
 
 #include "snp_model.hpp"
+#include <cusparse.h>
+#include "cublas_v2.h"
 
 class SNP_static: public SNP_model
 {
@@ -60,6 +62,37 @@ public:
     
 
 protected:
+    cublasHandle_t handle = NULL;
+    void printTransMX();
+    void include_synapse(uint i, uint j);
+    /* Calculates the spiking vector with the current configuration */
+    void calc_spiking_vector();
+    void load_transition_matrix();
+    void calc_transition();
+
+};
+
+class SNP_static_cusparse: public SNP_model
+{
+public:
+    SNP_static_cusparse(uint n, uint m, int mode, bool debug);
+    ~SNP_static_cusparse();
+    
+
+protected:
+    int * nnz;
+    int * d_nnz;
+    int * d_csrOffsets;
+    int * d_csrColumns;
+    float * d_csrValues;
+
+    void* d_buffer = NULL;
+
+    int * d_spiking_vector_aux;
+    cusparseHandle_t     cusparse_handle = NULL;
+    cusparseSpMatDescr_t cusparse_trans_mx;
+    cusparseDnVecDescr_t cusparse_spkv, cusparse_confv;
+
     void printTransMX();
     void include_synapse(uint i, uint j);
     /* Calculates the spiking vector with the current configuration */

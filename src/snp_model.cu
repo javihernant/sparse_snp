@@ -30,7 +30,7 @@ SNP_model::SNP_model(uint n, uint m, int mode, bool debug)
     this->ex_mode = mode;
     this->debug = debug;
 
-    if (mode==GPU_CUBLAS){
+    if (mode==GPU_CUBLAS || mode==GPU_CUSPARSE){
         this->cublas_conf_vector = (float*) malloc(sizeof(float)*n);
         memset(this->cublas_conf_vector,   0,  sizeof(float)*n);
         cudaMalloc(&this->d_cublas_conf_vector,   sizeof(float)*n);
@@ -136,7 +136,7 @@ void SNP_model::set_spikes (uint nid, uint s)
     gpu_updated = false;
     //////////////////////////////////////////////////////
 
-    if(ex_mode==GPU_CUBLAS){
+    if(ex_mode==GPU_CUBLAS || ex_mode==GPU_CUSPARSE){
         cublas_conf_vector[nid] = s; 
     }else{
         conf_vector[nid] = s; 
@@ -155,7 +155,7 @@ uint SNP_model::get_spikes (uint nid)
         cpu_updated=true;
     }
     //////////////////////////////////////////////////////
-    if(ex_mode==GPU_CUBLAS){
+    if(ex_mode==GPU_CUBLAS || ex_mode==GPU_CUSPARSE){
         return cublas_conf_vector[nid]; 
     }else{
         return conf_vector[nid];  
@@ -241,7 +241,7 @@ void SNP_model::printSpikingV(){
     int spv_size= ex_mode == GPU_OPTIMIZED ? n : m;
     printf("spiking_vector= ");
     for(int i=0; i<spv_size; i++){
-        if(ex_mode==GPU_CUBLAS){
+        if(ex_mode==GPU_CUBLAS || ex_mode==GPU_CUSPARSE){
             printf("{%.1f}",cublas_spiking_vector[i]);
         }else{
             printf("{%d}",spiking_vector[i]);
@@ -262,7 +262,7 @@ void SNP_model::printDelaysV(){
 void SNP_model::printConfV(){
     printf("conf_vector (after transition)= "); 
     for(int i=0; i< n; i++){
-        if(ex_mode==GPU_CUBLAS){
+        if(ex_mode==GPU_CUBLAS || ex_mode==GPU_CUSPARSE){
             printf("{%.1f}",cublas_conf_vector[i]);
         }else{
             printf("{%d}",conf_vector[i]);
@@ -288,7 +288,7 @@ bool SNP_model::transition_step()
 
     calc_spiking_vector(); //after this method is executed, an outdated version of spiking_vec and delay_vec is sent to host
 
-    if(debug && ex_mode==GPU_CUBLAS){
+    if(debug && (ex_mode==GPU_CUBLAS || ex_mode == GPU_CUSPARSE)){
         printTransMX();
     }
 
@@ -305,9 +305,12 @@ bool SNP_model::transition_step()
             case (GPU_OPTIMIZED):
                 calc_next_trans = spiking_vector[i] != -1 || delays_vector[rules.nid[i]]>0;
                 break;
-            case (GPU_CUBLAS):
+            case (GPU_CUBLAS ):
                 calc_next_trans = cublas_spiking_vector[i] != 0 || delays_vector[rules.nid[i]]>0;
                 // printf("\ncalc_next: %d\n", calc_next_trans);
+                break;
+            case(GPU_CUSPARSE):
+                calc_next_trans = cublas_spiking_vector[i] != 0 || delays_vector[rules.nid[i]]>0;
                 break;
             default:
                 calc_next_trans = spiking_vector[i] != 0 || delays_vector[rules.nid[i]]>0;
@@ -322,7 +325,6 @@ bool SNP_model::transition_step()
     }
     
     if(calc_next_trans){
-        
         calc_transition();
 
         if(ex_mode == GPU_CUBLAS){
@@ -367,7 +369,7 @@ void SNP_model::load_to_gpu ()
     //////////////////////////////////////////////////////
 
     // cublasGetVector (n , sizeof (* conf_vector ) , d_conf_vector ,1 ,conf_vector ,1);
-    if(ex_mode==GPU_CUBLAS){
+    if(ex_mode==GPU_CUBLAS || ex_mode==GPU_CUSPARSE){
         cudaMemcpy(d_cublas_conf_vector,   cublas_conf_vector,    sizeof(float)*n,   cudaMemcpyHostToDevice);
     }else{
         cudaMemcpy(d_conf_vector,   conf_vector,    sizeof(int)*n,   cudaMemcpyHostToDevice);
@@ -397,7 +399,7 @@ void SNP_model::load_to_cpu ()
     //////////////////////////////////////////////////////
    
 
-    if(ex_mode==GPU_CUBLAS){
+    if(ex_mode==GPU_CUBLAS || ex_mode==GPU_CUSPARSE){
         cudaMemcpy(cublas_conf_vector, d_cublas_conf_vector, sizeof(float)*n, cudaMemcpyDeviceToHost);
     }else{
         cudaMemcpy(conf_vector, d_conf_vector, sizeof(int)*n, cudaMemcpyDeviceToHost);

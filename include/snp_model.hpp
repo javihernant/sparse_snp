@@ -49,8 +49,8 @@ public:
     // void compute(int l=1) { while(l-->=1) transition_step(); };
 
 protected:
-    uint n;                   // number of neurons
-    uint m;                   // number of rules
+    uint n;           //TODO:change to n_neurons        // number of neurons
+    uint m;           //TODO:change to n_rules         // number of rules
     int z;                    //number of rows of trans_matrix_ell
     int ex_mode;              //execution mode. SPARSE, ELL=1, OPTIMIZED=2
     bool debug;
@@ -84,7 +84,7 @@ protected:
 
 
     //////////////////////////////////////CUBLAS variables/////////////////////////////////////////////////
-    cublasHandle_t handle;
+    
     
     float * cublas_conf_vector;     // configuration vector (# neurons)
     float  * cublas_trans_matrix;   // transition matrix (# rules * # neurons), requires negative numbers

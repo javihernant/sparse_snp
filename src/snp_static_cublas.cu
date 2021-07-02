@@ -117,6 +117,12 @@ __global__ void cublas_kalc_spiking_vector(float* spiking_vector, float* spiking
     uint nid = threadIdx.x+blockIdx.x*blockDim.x;
     
     if (nid<n) {
+        if(nid==0){
+            for(int i=0; i<5;i++){
+                printf("{%.1f}\n",spiking_vector_aux[i]);
+            }
+        }
+        
         bool rule_set = false;
         for (int r=rule_index[nid]; r<rule_index[nid+1]; r++){
             uchar e_i = rei[r];
@@ -129,7 +135,10 @@ __global__ void cublas_kalc_spiking_vector(float* spiking_vector, float* spiking
                 spiking_vector[r] = 1;
                 conf_vector[nid]-=rc[r];
                 printf("%d spikes are retracted\n", rc[r]);
-                printf("conf_vector[%d]=%.1f\n", nid, conf_vector[nid]);
+                for(int i=0; i<3; i++){
+                    printf("conf_vector[%d]=%.1f\n", i, conf_vector[i]);
+                }
+                
                 delays_vector[nid] = rd[r];
 
                 rule_set=true;
@@ -177,7 +186,7 @@ void SNP_static_cublas::calc_spiking_vector()
     uint gs = (n+255)/256;
     // checkErr2(cudaMemset((void *) &this->d_cublas_spiking_vector_aux, 0, sizeof(float)*m));
     thrust::device_ptr<float> dev_ptr(this->d_cublas_spiking_vector_aux);
-    thrust::fill(dev_ptr, dev_ptr + n, 0.0f);
+    thrust::fill(dev_ptr, dev_ptr + m, 0.0f);
     cublas_kalc_spiking_vector<<<gs,bs>>>(d_cublas_spiking_vector, d_cublas_spiking_vector_aux, d_cublas_trans_matrix, d_delays_vector, d_rules.d, d_cublas_conf_vector, d_rule_index,d_rules.c, d_rules.Ei, d_rules.En, n, m);
     cudaDeviceSynchronize();
 
@@ -189,11 +198,11 @@ void SNP_static_cublas::calc_spiking_vector()
 
 }
 
-__global__ void update_spiking_and_delays(float* spiking_vector, float* spiking_vector_aux, int * delays_vector, int n, int m){
+__global__ void update_spiking_and_delays(float* spiking_vector, float* spiking_vector_aux, int * delays_vector, int * rule_index, int n, int m){
     int nid = threadIdx.x+blockIdx.x*blockDim.x;
     //nid<n
     if (nid<n){
-        for (int r=0; r<m; r++){
+        for (int r=rule_index[nid]; r<rule_index[nid+1]; r++){
             if(spiking_vector_aux[r]==1){
                 spiking_vector[r]=0;
             } 
@@ -219,7 +228,7 @@ void SNP_static_cublas::calc_transition()
     float bet =1.0f;
     cublasSgemv(handle,CUBLAS_OP_T,m,n,&al,d_cublas_trans_matrix,m,d_cublas_spiking_vector_aux,1,&bet,d_cublas_conf_vector,1);
     
-    update_spiking_and_delays<<<n+255,256>>>(d_cublas_spiking_vector, d_cublas_spiking_vector_aux, d_delays_vector, n,m);
+    update_spiking_and_delays<<<n+255,256>>>(d_cublas_spiking_vector, d_cublas_spiking_vector_aux, d_delays_vector, d_rule_index, n,m);
     cudaDeviceSynchronize();
 
 

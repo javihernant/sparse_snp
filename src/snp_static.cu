@@ -130,6 +130,7 @@ void SNP_static::calc_spiking_vector()
 
 __global__ void kalc_transition(int* spiking_vector, int* trans_matrix, int* conf_vector,int * delays_vector, uint * rnid , int n, int m){
     int nid = threadIdx.x+blockIdx.x*blockDim.x;
+    //TODO: a thread for each rule.
     //nid<n
     if (nid<n && delays_vector[nid]==0){
         for (int r=0; r<m; r++){
