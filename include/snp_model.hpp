@@ -18,7 +18,7 @@ class SNP_model
 {
 public:
     
-    SNP_model(uint n, uint m, int mode, bool debug);
+    SNP_model(uint n, uint m, int mode, int verbosity);
     ~SNP_model();
 
     /** 
@@ -52,8 +52,11 @@ protected:
     uint n;           //TODO:change to n_neurons        // number of neurons
     uint m;           //TODO:change to n_rules         // number of rules
     int z;                    //number of rows of trans_matrix_ell
+    int step;                 //step of computation
     int ex_mode;              //execution mode. SPARSE, ELL=1, OPTIMIZED=2
-    bool debug;
+    int verbosity;
+    bool * calc_next_trans;
+    
     // CPU part
     int * conf_vector;     // configuration vector (# neurons)
     int  * trans_matrix;   // transition matrix (# rules * # neurons), requires negative numbers
@@ -80,7 +83,7 @@ protected:
     int * d_spiking_vector;
     int * d_delays_vector;
     int   * d_rule_index;      // indicates for each neuron, the starting rule index (# neurons+1)
-
+    bool * d_calc_next_trans;
 
 
     //////////////////////////////////////CUBLAS variables/////////////////////////////////////////////////
@@ -89,6 +92,7 @@ protected:
     float * cublas_conf_vector;     // configuration vector (# neurons)
     float  * cublas_trans_matrix;   // transition matrix (# rules * # neurons), requires negative numbers
     float * cublas_spiking_vector;  // spiking vector
+    float * spiking_vector_aux;
     
 
     // GPU counterpart
@@ -101,10 +105,11 @@ protected:
 
     
     // Consistency flags
-    bool transMX_printed;
-    bool gpu_updated;           // true if GPU copy is updated
-    bool cpu_updated;           // true if CPU copy is updated
-    bool done_rules;            // true if all rules have been introduced (preventing adding synapses)
+    bool delays_active=0;
+    bool transMX_printed =0;
+    bool gpu_updated =0;           // true if GPU copy is updated
+    bool cpu_updated =0;           // true if CPU copy is updated
+    bool done_rules = 0;            // true if all rules have been introduced (preventing adding synapses)
 
     // auxiliary methods
     void printSpikingV();

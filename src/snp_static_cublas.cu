@@ -20,7 +20,7 @@ void checkErr2(cudaError_t err) {
 }
 
 /** Allocation */
-SNP_static_cublas::SNP_static_cublas(uint n, uint m, int mode, bool debug) : SNP_model(n,m, mode, debug)
+SNP_static_cublas::SNP_static_cublas(uint n, uint m, int mode, int verbosity) : SNP_model(n,m, mode, verbosity)
 {
     
     cublasCreate(&(this->handle));
@@ -181,7 +181,6 @@ __global__ void cublas_kalc_spiking_vector(float* spiking_vector, float* spiking
 
 void SNP_static_cublas::calc_spiking_vector() 
 {
-    cudaError_t error;
     uint bs = 256;
     uint gs = (n+255)/256;
     // checkErr2(cudaMemset((void *) &this->d_cublas_spiking_vector_aux, 0, sizeof(float)*m));

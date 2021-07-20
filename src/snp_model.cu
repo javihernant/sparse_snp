@@ -14,21 +14,26 @@
 
 using namespace std;
 
-void checkErr(cudaError_t err) {
-    if (err != cudaSuccess) {
-        fprintf(stderr, "%s", cudaGetErrorString(err));
-    }
+#define CHECK_CUDA(func)                                                       \
+{                                                                              \
+    cudaError_t status = (func);                                               \
+    if (status != cudaSuccess) {                                               \
+        printf("CUDA API failed at line %d with error: %s (%d)\n",             \
+               __LINE__, cudaGetErrorString(status), status);                  \
+                                                          \
+    }                                                                          \
 }
 
 /** Allocation */
 
-SNP_model::SNP_model(uint n, uint m, int mode, bool debug)
+SNP_model::SNP_model(uint n, uint m, int mode, int verbosity)
 {
     // allocation in CPU
     this->m = m;  // number of rules
     this->n = n;  // number of neurons
     this->ex_mode = mode;
-    this->debug = debug;
+    this->verbosity = verbosity;
+    this->step = 0;
 
     if (mode==GPU_CUBLAS || mode==GPU_CUSPARSE){
         this->cublas_conf_vector = (float*) malloc(sizeof(float)*n);
@@ -39,7 +44,7 @@ SNP_model::SNP_model(uint n, uint m, int mode, bool debug)
         this->conf_vector     = (int*) malloc(sizeof(int)*n); // configuration vector (only one, we simulate just a computation)
         memset(this->conf_vector,   0,  sizeof(int)*n);
         cudaMalloc(&this->d_conf_vector,   sizeof(int)*n);
-        checkErr(cudaMemset((void*) &this->d_conf_vector,   0,  sizeof(int)*n));
+        CHECK_CUDA(cudaMemset((void*) &this->d_conf_vector,   0,  sizeof(int)*n));
     }
     
     
@@ -52,6 +57,7 @@ SNP_model::SNP_model(uint n, uint m, int mode, bool debug)
     this->rules.p         = (int*)  malloc(sizeof(int)*m); // RHS of rule
     this->rules.d = (uint*) malloc(sizeof(uint)*(m));
     this->rules.nid       = (uint*)   malloc(sizeof(uint)*(m)); // Index of the neuron where the rule is
+    this->calc_next_trans = (bool*) malloc(sizeof(bool));
 
     // initialization (only in CPU, having updated version)
     
@@ -80,6 +86,7 @@ SNP_model::SNP_model(uint n, uint m, int mode, bool debug)
     cudaMalloc(&this->d_rules.p,       sizeof(int)*m);
     cudaMalloc(&this->d_rules.d,       sizeof(uint)*m);
     cudaMalloc(&this->d_rules.nid,     sizeof(uint)*m);
+    cudaMalloc(&this->d_calc_next_trans,     sizeof(bool));
 
     
    
@@ -91,7 +98,7 @@ SNP_model::SNP_model(uint n, uint m, int mode, bool debug)
 /** Free mem */
 SNP_model::~SNP_model()
 {
-    if(ex_mode ==GPU_CUBLAS){
+    if(ex_mode ==GPU_CUBLAS || ex_mode ==GPU_CUSPARSE){
         free(this->cublas_conf_vector);
         cudaFree(this->d_cublas_conf_vector);
     }else{
@@ -109,6 +116,8 @@ SNP_model::~SNP_model()
     free(this->rules.p);
     free(this->rules.d);
     free(this->rules.nid);
+    free(this->calc_next_trans);
+    
 
     
     // cudaFree(this->d_spiking_vector);
@@ -121,6 +130,7 @@ SNP_model::~SNP_model()
     cudaFree(this->d_rules.p);
     cudaFree(this->d_rules.d);
     cudaFree(this->d_rules.nid);
+    cudaFree(this->d_calc_next_trans);
 }
 
 void SNP_model::set_spikes (uint nid, uint s)
@@ -237,19 +247,8 @@ void SNP_model::calc_z(){
     }
 }
 
-void SNP_model::printSpikingV(){
-    int spv_size= ex_mode == GPU_OPTIMIZED ? n : m;
-    printf("spiking_vector= ");
-    for(int i=0; i<spv_size; i++){
-        if(ex_mode==GPU_CUBLAS || ex_mode==GPU_CUSPARSE){
-            printf("{%.1f}",cublas_spiking_vector[i]);
-        }else{
-            printf("{%d}",spiking_vector[i]);
-        }
-        
-    }
-    printf("\n");
-}
+
+
 
 void SNP_model::printDelaysV(){
     printf("delays_vector= "); 
@@ -269,6 +268,108 @@ void SNP_model::printConfV(){
         }
         
     }
+    printf("\n");
+}
+
+
+__global__ void does_it_calc_nxt(bool * calc_nxt, int* spkv, int spkv_size, int * delays, int neurons, int ex_mode, int verbosity){
+    calc_nxt[0] = false;
+    if(verbosity>=3){
+        printf("Spiking_vector:");
+    }
+    
+    for(int i=0; i<spkv_size; i++){
+        if((ex_mode != GPU_OPTIMIZED && spkv[i] !=0) || ex_mode == GPU_OPTIMIZED && spkv[i] !=-1){
+            calc_nxt[0] = true;
+            if(verbosity>=3){
+                printf("%d ",spkv[i]);
+            }else{
+                break;
+            }
+        }
+    }
+    
+    
+    if(!calc_nxt[0] || verbosity>=3){
+        if(verbosity>=3){
+            printf("\n");
+            printf("Delays_v:");
+        }
+        for(int i=0; i<neurons; i++){
+            if(delays[i] >0){
+                calc_nxt[0] = true;
+                if(verbosity>=3){
+                    printf("%d ",delays[i]);
+                }else{
+                    break;
+                }
+                
+            }
+    
+        }
+        if(verbosity>=3){
+            printf("\n");
+        }   
+    }
+
+}
+
+__global__ void does_it_calc_nxt_cu(bool * calc_nxt, float* spkv, float* spkv_aux, int spkv_size, int * delays, int neurons, int verbosity){
+    calc_nxt[0] = false;
+    if(verbosity>=3){
+        printf("Spiking_vector:");
+    }
+    
+    for(int i=0; i<spkv_size; i++){
+        if(verbosity>=3){
+            printf("%.1f ",spkv[i]);
+        }
+        if(spkv[i] !=0){
+            calc_nxt[0] = true;
+            if(verbosity<3){
+                break;
+            }
+                
+            
+        }
+    }
+    printf("\n");
+
+    if(verbosity>=3){
+        printf("Spiking_vector_aux= ");
+        for(int i=0; i<spkv_size; i++){
+            printf("%.1f ",spkv_aux[i]);
+            
+        }
+        printf("\n");
+    }
+    
+    
+    if(!calc_nxt[0] || verbosity>=3){
+        if(verbosity>=3){
+            printf("\n");
+            printf("Delays_v:");
+        }
+        for(int i=0; i<neurons; i++){
+            if(verbosity>=3){
+                printf("%d ",delays[i]);
+            }
+            if(delays[i] >0){
+                calc_nxt[0] = true;
+                if(verbosity<3){
+                    break;
+                }
+                
+            }
+    
+        }
+        if(verbosity>=3){
+            printf("\n");
+        }   
+    }
+
+    
+    
 }
 
 bool SNP_model::transition_step()
@@ -281,77 +382,70 @@ bool SNP_model::transition_step()
     cpu_updated = false;
     //////////////////////////////////////////////////////
     
-    if(debug && !transMX_printed){
-        printTransMX();
-        transMX_printed = true;
-    }
+    if(step==0 && verbosity>=2){
+        printf("Initial conf_vector:");
+        for(int nid=0; nid<n; nid++){
+            if(ex_mode==GPU_CUBLAS || ex_mode==GPU_CUSPARSE){
+                printf("%.1f ", cublas_conf_vector[nid]);
 
-    calc_spiking_vector(); //after this method is executed, an outdated version of spiking_vec and delay_vec is sent to host
-
-    if(debug && (ex_mode==GPU_CUBLAS || ex_mode == GPU_CUSPARSE)){
-        printTransMX();
-    }
-
-    int spv_size= ex_mode == GPU_OPTIMIZED ? n : m;
-    
-    
-    bool calc_next_trans;
-    for(int i=0; i<spv_size; i++){
-        // Check if at least one rule is active. If so, continue calculating (return false)
-
-        
-        switch(ex_mode)
-        {
-            case (GPU_OPTIMIZED):
-                calc_next_trans = spiking_vector[i] != -1 || delays_vector[rules.nid[i]]>0;
-                break;
-            case (GPU_CUBLAS ):
-                calc_next_trans = cublas_spiking_vector[i] != 0 || delays_vector[rules.nid[i]]>0;
-                // printf("\ncalc_next: %d\n", calc_next_trans);
-                break;
-            case(GPU_CUSPARSE):
-                calc_next_trans = cublas_spiking_vector[i] != 0 || delays_vector[rules.nid[i]]>0;
-                break;
-            default:
-                calc_next_trans = spiking_vector[i] != 0 || delays_vector[rules.nid[i]]>0;
+            }else{
+                printf("%d ", conf_vector[nid]);
+            }
             
         }
-        
-        if(calc_next_trans){
-            break;
-        }
-        
-
+        printf("\n");
     }
-    
-    if(calc_next_trans){
-        calc_transition();
 
-        if(ex_mode == GPU_CUBLAS){
+    calc_spiking_vector(); 
+    int spv_size= ex_mode == GPU_OPTIMIZED ? n : m;
+
+    
+    if(ex_mode == GPU_CUBLAS || ex_mode ==GPU_CUSPARSE){
+        
+        does_it_calc_nxt_cu<<<1,1>>>(d_calc_next_trans, d_cublas_spiking_vector, d_cublas_spiking_vector_aux,spv_size, d_delays_vector, n, verbosity);
+    }else{
+        does_it_calc_nxt<<<1,1>>>(d_calc_next_trans, d_spiking_vector, spv_size, d_delays_vector, n, ex_mode, verbosity);
+    }
+    cudaDeviceSynchronize();
+    CHECK_CUDA(cudaMemcpy(this->calc_next_trans, this->d_calc_next_trans, sizeof(bool),cudaMemcpyDeviceToHost));
+    
+    if(this->calc_next_trans[0]){
+        if((verbosity>=3 && (ex_mode==GPU_CUBLAS || ex_mode == GPU_CUSPARSE)) || (verbosity>=3 && !transMX_printed)){
+            printf("Trans_MX:\n");
+            printTransMX();
+            transMX_printed = true;
+        }
+
+        calc_transition();
+        //TODO: send previous configuration while computing transition.
+
+        if(ex_mode == GPU_CUBLAS || ex_mode == GPU_CUSPARSE){
             load_transition_matrix();
         }
         
 
         load_to_cpu(); 
 
-        if(debug){
-            printSpikingV();
-            printDelaysV();
+        if(this->verbosity>=2){
             printConfV();
             printf("\n---------------------------------------\n");
         }
         
-        
-        
+
         return false;
     }
-    printSpikingV();
+    
+    
+    // printSpikingV();
     // printDelaysV();
-    printConfV();
+    if(this->verbosity==1){
+        printConfV();
+    }
+    
     
 
 
-    printf("\n\n");
+    // printf("\n\n");
 
 
     

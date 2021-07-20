@@ -8,7 +8,7 @@
 class SNP_static: public SNP_model
 {
 public:
-    SNP_static(uint n, uint m, int mode, bool debug);
+    SNP_static(uint n, uint m, int mode, int verbosity);
     ~SNP_static();
     
 
@@ -25,7 +25,7 @@ protected:
 class SNP_static_ell: public SNP_model
 {
 public:
-    SNP_static_ell(uint n, uint m, int mode, bool debug);
+    SNP_static_ell(uint n, uint m, int mode, int verbosity);
     ~SNP_static_ell();
 
 protected:
@@ -41,7 +41,7 @@ protected:
 class SNP_static_optimized: public SNP_model
 {
 public:
-    SNP_static_optimized(uint n, uint m, int mode, bool debug);
+    SNP_static_optimized(uint n, uint m, int mode, int verbosity);
     ~SNP_static_optimized();
 
 protected:
@@ -57,7 +57,7 @@ protected:
 class SNP_static_cublas: public SNP_model
 {
 public:
-    SNP_static_cublas(uint n, uint m, int mode, bool debug);
+    SNP_static_cublas(uint n, uint m, int mode, int verbosity);
     ~SNP_static_cublas();
     
 
@@ -75,17 +75,19 @@ protected:
 class SNP_static_cusparse: public SNP_model
 {
 public:
-    SNP_static_cusparse(uint n, uint m, int mode, bool debug);
+    SNP_static_cusparse(uint n, uint m, int mode, int verbosity);
     ~SNP_static_cusparse();
     
 
 protected:
     int * nnz;
+    int nnz0;
     int * d_nnz;
     int * d_csrOffsets;
     int * d_csrColumns;
     float * d_csrValues;
-
+    bool buffer_created = false;
+    size_t bufferSize;
     void* d_buffer = NULL;
 
     int * d_spiking_vector_aux;

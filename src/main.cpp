@@ -101,11 +101,11 @@
 	
 // }
 
-void testOrdenarNums(int* nums, int size, bool debug){
+void testOrdenarNums(int* nums, int size, int verbosity){
 	int n= size*3; //number of neurons is number of numbers * 3 layers. 
 	int m = size + size*size; //each neuron in the first layer has one rule. Each neuron in the second layer has size (of the array of nums to be sorted) rules. There are "size" neurons in each layer (input, second, output).
 
-	SNP_static_cusparse TestModel(n, m, GPU_CUSPARSE, debug);
+	SNP_static_cusparse TestModel(n, m, GPU_CUSPARSE, verbosity);
 	//set spikes of neurons in first layer and add their rules
 	for(int i=0; i<size; i++){
 		TestModel.set_spikes (i, nums[i]);
@@ -143,13 +143,13 @@ void testOrdenarNums(int* nums, int size, bool debug){
 	
 	}
 	
-	printf("Initial conf_vector: ");
-	//////////////////////////////////////////////////
-	for(int nid=0; nid<n; nid++){
-		printf("%d ", TestModel.get_spikes(nid));
-	}
-	printf("\n\n");
-	///////////////////////////////////////////////////
+	// printf("Initial conf_vector: ");
+	// //////////////////////////////////////////////////
+	// for(int nid=0; nid<n; nid++){
+	// 	printf("%d ", TestModel.get_spikes(nid));
+	// }
+	// printf("\n\n");
+	// ///////////////////////////////////////////////////
 	
 	TestModel.compute(500); 
 	
@@ -164,26 +164,26 @@ void testOrdenarNums(int* nums, int size, bool debug){
 	
 // }
 
-void testDelays(bool debug){
+void testDelays(int verbosity){
 	
 	//Loading one SNP model
 	uint m = 5; //num reglas
 	uint n = 3; //num neuronas
 	
-	SNP_static_cusparse TestModel(n, m, GPU_CUSPARSE, debug);
+	SNP_static_cusparse TestModel(n, m, GPU_CUSPARSE, verbosity);
 	int C0[3] = {0,1,1};
 	for (int i=0; i<n; i++){
 		TestModel.set_spikes (i, C0[i]);
 	}
 
-	printf("Initial conf_vector: ");
+	// printf("Initial conf_vector: ");
 
-	//////////////////////////////////////////////////
-	for(int nid=0; nid<n; nid++){
-		printf("%d ", TestModel.get_spikes(nid));
-	}
-	printf("\n----------------------------------\n");
-	///////////////////////////////////////////////////
+	// //////////////////////////////////////////////////
+	// for(int nid=0; nid<n; nid++){
+	// 	printf("%d ", TestModel.get_spikes(nid));
+	// }
+	// printf("\n----------------------------------\n");
+	// ///////////////////////////////////////////////////
 
 	//add_rule (uint nid, short e_n, short e_i, short c, short p, ushort d) 
 	TestModel.add_rule(0, 1, 1, 1, 1,0);
@@ -211,14 +211,32 @@ int main(int argc, char* argv[])
 {
 	//////////////////////
 	
-	bool debug = false;
-
-	if(argc>1 && strcmp(argv[1],"--debug=1")==0) {
-		printf("enabling debug");
-		debug=true;
-    }
 	
-	testDelays(debug);
+
+	//verbosity
+	//0 nada por pantalla
+	//1 ultima configuracion
+	//2 todas las configuraciones
+	//lo anterior + spiking vectors, delays, trans_MX etc.
+
+	int verbosity = 0;
+	if(argc>1){
+		if (strcmp(argv[1],"--verbosity=1")==0) {
+			verbosity=1;
+		}
+
+		if (strcmp(argv[1],"--verbosity=2")==0) {
+			verbosity=2;
+		}
+
+		if (strcmp(argv[1],"--verbosity=3")==0) {
+			verbosity=3;
+		}
+
+	}
+    
+	
+	testDelays(verbosity);
 
 	// int size = 10;
 	// int nums[size];
