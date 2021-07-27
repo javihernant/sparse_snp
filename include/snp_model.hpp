@@ -79,17 +79,18 @@ protected:
 
     // GPU counterpart
     int * d_conf_vector;
+    int * d_conf_vector_cpy;
     int  * d_trans_matrix;
     int * d_spiking_vector;
     int * d_delays_vector;
     int   * d_rule_index;      // indicates for each neuron, the starting rule index (# neurons+1)
     bool * d_calc_next_trans;
+    cudaStream_t stream1;
+    cudaStream_t stream2;
 
 
     //////////////////////////////////////CUBLAS variables/////////////////////////////////////////////////
-    
-    
-    float * cublas_conf_vector;     // configuration vector (# neurons)
+    float * cublas_conf_vector;
     float  * cublas_trans_matrix;   // transition matrix (# rules * # neurons), requires negative numbers
     float * cublas_spiking_vector;  // spiking vector
     float * spiking_vector_aux;
@@ -121,7 +122,7 @@ protected:
     void load_to_gpu();
     /** 
      * Download information from the GPU. */
-    void load_to_cpu();  
+    void load_to_cpu(cudaStream_t stream);  
     void calc_z();
     
 

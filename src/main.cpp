@@ -200,7 +200,7 @@ void testDelays(int verbosity){
 	
 
 	
-	TestModel.compute(5);
+	TestModel.compute(10);
 	
 	
 

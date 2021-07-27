@@ -34,20 +34,25 @@ SNP_model::SNP_model(uint n, uint m, int mode, int verbosity)
     this->ex_mode = mode;
     this->verbosity = verbosity;
     this->step = 0;
+    cudaStreamCreate(&this->stream1);
+    CHECK_CUDA(cudaStreamCreateWithFlags(&this->stream2, cudaStreamNonBlocking));
+    
+    cudaMallocHost(&this->conf_vector, sizeof(int)*n);
+    memset(this->conf_vector,   0,  sizeof(int)*n);
 
     if (mode==GPU_CUBLAS || mode==GPU_CUSPARSE){
-        this->cublas_conf_vector = (float*) malloc(sizeof(float)*n);
-        memset(this->cublas_conf_vector,   0,  sizeof(float)*n);
         cudaMalloc(&this->d_cublas_conf_vector,   sizeof(float)*n);
+        this->cublas_conf_vector = (float *) malloc(sizeof(float)*n);
+        
+        
         // checkErr(cudaMemset((void *) &this->d_cublas_conf_vector,   0,  sizeof(float)*n));
-    }else{
-        this->conf_vector     = (int*) malloc(sizeof(int)*n); // configuration vector (only one, we simulate just a computation)
-        memset(this->conf_vector,   0,  sizeof(int)*n);
+    }else{  
         cudaMalloc(&this->d_conf_vector,   sizeof(int)*n);
         CHECK_CUDA(cudaMemset((void*) &this->d_conf_vector,   0,  sizeof(int)*n));
     }
+    cudaMalloc(&this->d_conf_vector_cpy, sizeof(int)*n);
     
-    
+
     this->spiking_vector  = NULL; // spiking vector
     this->delays_vector = (int*) malloc(sizeof(int)*(n));
     this->rule_index      = (int*)   malloc(sizeof(int)*(n+1)); // indices of rules inside neuron (start index per neuron)
@@ -98,13 +103,15 @@ SNP_model::SNP_model(uint n, uint m, int mode, int verbosity)
 /** Free mem */
 SNP_model::~SNP_model()
 {
+    cudaFree(this->d_conf_vector_cpy);
     if(ex_mode ==GPU_CUBLAS || ex_mode ==GPU_CUSPARSE){
         free(this->cublas_conf_vector);
         cudaFree(this->d_cublas_conf_vector);
     }else{
-        free(this->conf_vector);
+        
         cudaFree(this->d_conf_vector);
     }
+    cudaFreeHost(this->conf_vector);
     
     // free(this->spiking_vector);
     // if (this->trans_matrix) free(this->trans_matrix);
@@ -131,6 +138,14 @@ SNP_model::~SNP_model()
     cudaFree(this->d_rules.d);
     cudaFree(this->d_rules.nid);
     cudaFree(this->d_calc_next_trans);
+    
+    if(this->stream1){
+        cudaStreamDestroy(this->stream1);
+    }
+
+    if(this->stream2){
+        cudaStreamDestroy(this->stream2);
+    }
 }
 
 void SNP_model::set_spikes (uint nid, uint s)
@@ -140,7 +155,7 @@ void SNP_model::set_spikes (uint nid, uint s)
     // check memory consistency, who has the updated copy?
     assert(gpu_updated || cpu_updated);
     if (gpu_updated && !cpu_updated) {
-        load_to_cpu();
+        load_to_cpu(NULL);
         cpu_updated=true;
     }
     gpu_updated = false;
@@ -161,7 +176,7 @@ uint SNP_model::get_spikes (uint nid)
     // check memory consistency, who has the updated copy?
     assert(gpu_updated || cpu_updated);
     if (gpu_updated && !cpu_updated) {
-        load_to_cpu();
+        load_to_cpu(NULL);
         cpu_updated=true;
     }
     //////////////////////////////////////////////////////
@@ -261,11 +276,7 @@ void SNP_model::printDelaysV(){
 void SNP_model::printConfV(){
     printf("conf_vector (after transition)= "); 
     for(int i=0; i< n; i++){
-        if(ex_mode==GPU_CUBLAS || ex_mode==GPU_CUSPARSE){
-            printf("{%.1f}",cublas_conf_vector[i]);
-        }else{
-            printf("{%d}",conf_vector[i]);
-        }
+        printf("{%d}",conf_vector[i]);
         
     }
     printf("\n");
@@ -395,11 +406,16 @@ bool SNP_model::transition_step()
         }
         printf("\n");
     }
+    if(this->step>0  && verbosity>=2){
 
-    calc_spiking_vector(); 
+        load_to_cpu(this->stream1); 
+        cpu_updated=true;
+        printConfV();
+        printf("\n---------------------------------------\n");
+    }
+
+    calc_spiking_vector(); //TODO:use stream 2??
     int spv_size= ex_mode == GPU_OPTIMIZED ? n : m;
-
-    
     if(ex_mode == GPU_CUBLAS || ex_mode ==GPU_CUSPARSE){
         
         does_it_calc_nxt_cu<<<1,1>>>(d_calc_next_trans, d_cublas_spiking_vector, d_cublas_spiking_vector_aux,spv_size, d_delays_vector, n, verbosity);
@@ -410,44 +426,29 @@ bool SNP_model::transition_step()
     CHECK_CUDA(cudaMemcpy(this->calc_next_trans, this->d_calc_next_trans, sizeof(bool),cudaMemcpyDeviceToHost));
     
     if(this->calc_next_trans[0]){
+        calc_transition();
+        cudaDeviceSynchronize();
+        this->step++;
+
         if((verbosity>=3 && (ex_mode==GPU_CUBLAS || ex_mode == GPU_CUSPARSE)) || (verbosity>=3 && !transMX_printed)){
             printf("Trans_MX:\n");
             printTransMX();
             transMX_printed = true;
         }
-
-        calc_transition();
         //TODO: send previous configuration while computing transition.
 
         if(ex_mode == GPU_CUBLAS || ex_mode == GPU_CUSPARSE){
             load_transition_matrix();
         }
-        
-
-        load_to_cpu(); 
-
-        if(this->verbosity>=2){
-            printConfV();
-            printf("\n---------------------------------------\n");
-        }
-        
 
         return false;
     }
-    
-    
-    // printSpikingV();
-    // printDelaysV();
+
     if(this->verbosity==1){
+        load_to_cpu(NULL); 
+        cpu_updated=true;
         printConfV();
     }
-    
-    
-
-
-    // printf("\n\n");
-
-
     
     //stop criterion if no rule found active and all neurons are open 
     return true;
@@ -455,35 +456,39 @@ bool SNP_model::transition_step()
 
 void SNP_model::load_to_gpu () 
 {
-    //////////////////////////////////////////////////////
-    // check memory consistency, who has the updated copy?
-    assert(gpu_updated || cpu_updated);
-    if (gpu_updated) return;
-    gpu_updated = true;
-    //////////////////////////////////////////////////////
+    if(this->step==0){
+        //////////////////////////////////////////////////////
+        // check memory consistency, who has the updated copy?
+        assert(gpu_updated || cpu_updated);
+        if (gpu_updated) return;
+        gpu_updated = true;
+        //////////////////////////////////////////////////////
 
-    // cublasGetVector (n , sizeof (* conf_vector ) , d_conf_vector ,1 ,conf_vector ,1);
-    if(ex_mode==GPU_CUBLAS || ex_mode==GPU_CUSPARSE){
-        cudaMemcpy(d_cublas_conf_vector,   cublas_conf_vector,    sizeof(float)*n,   cudaMemcpyHostToDevice);
-    }else{
-        cudaMemcpy(d_conf_vector,   conf_vector,    sizeof(int)*n,   cudaMemcpyHostToDevice);
+        // cublasGetVector (n , sizeof (* conf_vector ) , d_conf_vector ,1 ,conf_vector ,1);
+        if(ex_mode==GPU_CUBLAS || ex_mode==GPU_CUSPARSE){
+            cudaMemcpy(d_cublas_conf_vector,   cublas_conf_vector,    sizeof(float)*n,   cudaMemcpyHostToDevice);
+        }else{
+            cudaMemcpy(d_conf_vector,   conf_vector,    sizeof(int)*n,   cudaMemcpyHostToDevice);
+        }
+        
+        // cudaMemcpy(d_spiking_vector,spiking_vector, sizeof(ushort)*m,   cudaMemcpyHostToDevice);
+        cudaMemcpy(d_rule_index,    rule_index,     sizeof(int)*(n+1), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_rules.Ei,      rules.Ei,       sizeof(int)*m,    cudaMemcpyHostToDevice);
+        cudaMemcpy(d_rules.En,      rules.En,       sizeof(int)*m,    cudaMemcpyHostToDevice);
+        cudaMemcpy(d_rules.c,       rules.c,        sizeof(int)*m,    cudaMemcpyHostToDevice);
+        cudaMemcpy(d_rules.p,       rules.p,        sizeof(int)*m,    cudaMemcpyHostToDevice);
+        cudaMemcpy(d_rules.d,       rules.d,        sizeof(uint)*m,    cudaMemcpyHostToDevice);
+        cudaMemcpy(d_rules.nid,     rules.nid,      sizeof(uint)*m,     cudaMemcpyHostToDevice);
+        
+        load_transition_matrix();
+
     }
     
-    // cudaMemcpy(d_spiking_vector,spiking_vector, sizeof(ushort)*m,   cudaMemcpyHostToDevice);
-    cudaMemcpy(d_rule_index,    rule_index,     sizeof(int)*(n+1), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_rules.Ei,      rules.Ei,       sizeof(int)*m,    cudaMemcpyHostToDevice);
-    cudaMemcpy(d_rules.En,      rules.En,       sizeof(int)*m,    cudaMemcpyHostToDevice);
-    cudaMemcpy(d_rules.c,       rules.c,        sizeof(int)*m,    cudaMemcpyHostToDevice);
-    cudaMemcpy(d_rules.p,       rules.p,        sizeof(int)*m,    cudaMemcpyHostToDevice);
-    cudaMemcpy(d_rules.d,       rules.d,        sizeof(uint)*m,    cudaMemcpyHostToDevice);
-    cudaMemcpy(d_rules.nid,     rules.nid,      sizeof(uint)*m,     cudaMemcpyHostToDevice);
-    
-    load_transition_matrix();
     
     
 }
 
-void SNP_model::load_to_cpu ()
+void SNP_model::load_to_cpu (cudaStream_t stream)
 {
     //////////////////////////////////////////////////////
     // check memory consistency, who has the updated copy?
@@ -492,15 +497,22 @@ void SNP_model::load_to_cpu ()
     cpu_updated = true;
     //////////////////////////////////////////////////////
    
+    cudaMemcpyAsync(conf_vector, d_conf_vector_cpy, sizeof(int)*n, cudaMemcpyDeviceToHost, stream);
 
-    if(ex_mode==GPU_CUBLAS || ex_mode==GPU_CUSPARSE){
-        cudaMemcpy(cublas_conf_vector, d_cublas_conf_vector, sizeof(float)*n, cudaMemcpyDeviceToHost);
-    }else{
-        cudaMemcpy(conf_vector, d_conf_vector, sizeof(int)*n, cudaMemcpyDeviceToHost);
-    }
+    // if(stream){
+
+
+    // }else{
+    // //if stream is NULL
+    // if(ex_mode==GPU_CUBLAS || ex_mode==GPU_CUSPARSE){
+    //     cudaMemcpy(cublas_conf_vector, d_cublas_conf_vector, sizeof(float)*n, cudaMemcpyDeviceToHost);
+        
+    // }else{
+    //     cudaMemcpy(conf_vector, d_conf_vector, sizeof(int)*n, cudaMemcpyDeviceToHost);
+    // }
+
+    // }
     
-    // cudaMemcpy(spiking_vector, d_spiking_vector,  sizeof(ushort)*m, cudaMemcpyDeviceToHost);
-    // cudaMemcpy(delays_vector, d_delays_vector,  sizeof(ushort)*n, cudaMemcpyDeviceToHost);
     
     
 }

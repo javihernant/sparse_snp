@@ -22,7 +22,6 @@ void checkErr2(cudaError_t err) {
 /** Allocation */
 SNP_static_cublas::SNP_static_cublas(uint n, uint m, int mode, int verbosity) : SNP_model(n,m, mode, verbosity)
 {
-    
     cublasCreate(&(this->handle));
     //Allocate cpu variables
     this -> cublas_spiking_vector = (float*) malloc(sizeof(float)*m);
@@ -117,11 +116,6 @@ __global__ void cublas_kalc_spiking_vector(float* spiking_vector, float* spiking
     uint nid = threadIdx.x+blockIdx.x*blockDim.x;
     
     if (nid<n) {
-        if(nid==0){
-            for(int i=0; i<5;i++){
-                printf("{%.1f}\n",spiking_vector_aux[i]);
-            }
-        }
         
         bool rule_set = false;
         for (int r=rule_index[nid]; r<rule_index[nid+1]; r++){
@@ -134,10 +128,8 @@ __global__ void cublas_kalc_spiking_vector(float* spiking_vector, float* spiking
                 
                 spiking_vector[r] = 1;
                 conf_vector[nid]-=rc[r];
-                printf("%d spikes are retracted\n", rc[r]);
-                for(int i=0; i<3; i++){
-                    printf("conf_vector[%d]=%.1f\n", i, conf_vector[i]);
-                }
+                // printf("%d spikes are retracted\n", rc[r]);
+                
                 
                 delays_vector[nid] = rd[r];
 
@@ -225,6 +217,7 @@ void SNP_static_cublas::calc_transition()
 {
     float al =1.0f;
     float bet =1.0f;
+    cublasSetStream(this->handle, this->stream2);
     cublasSgemv(handle,CUBLAS_OP_T,m,n,&al,d_cublas_trans_matrix,m,d_cublas_spiking_vector_aux,1,&bet,d_cublas_conf_vector,1);
     
     update_spiking_and_delays<<<n+255,256>>>(d_cublas_spiking_vector, d_cublas_spiking_vector_aux, d_delays_vector, d_rule_index, n,m);

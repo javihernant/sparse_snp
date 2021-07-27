@@ -147,7 +147,7 @@ __global__ void kalc_transition_optimized(int* spiking_vector, int* trans_matrix
 
 void SNP_static_optimized::calc_transition()
 {
-    kalc_transition_optimized<<<n+255,256>>>(d_spiking_vector,d_trans_matrix, d_conf_vector, d_delays_vector, d_rules.c, d_rules.p, z,n);
+    kalc_transition_optimized<<<n+255,256,0,this->stream2>>>(d_spiking_vector,d_trans_matrix, d_conf_vector, d_delays_vector, d_rules.c, d_rules.p, z,n);
     cudaDeviceSynchronize();
 
 

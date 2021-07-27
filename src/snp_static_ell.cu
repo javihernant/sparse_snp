@@ -202,9 +202,8 @@ __global__ void update_delays_vector(int * delays_vector, int n){
 
 void SNP_static_ell::calc_transition()
 {
-    kalc_transition_ell<<<n+255,256>>>(d_spiking_vector,d_trans_matrix, d_conf_vector, d_delays_vector, d_rules.nid,z,m);
-    cudaDeviceSynchronize();
-    update_delays_vector<<<n+255,256>>>(d_delays_vector, n);
+    kalc_transition_ell<<<n+255,256,0,this->stream2>>>(d_spiking_vector,d_trans_matrix, d_conf_vector, d_delays_vector, d_rules.nid,z,m);
+    update_delays_vector<<<n+255,256,0,this->stream2>>>(d_delays_vector, n);
     cudaDeviceSynchronize();
 
 }

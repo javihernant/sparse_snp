@@ -75,8 +75,12 @@ __global__ void cusparse_gen_CSR_vectors(int * trans_matrix, int nrows, int ncol
 
 /** Allocation */
 SNP_static_cusparse::SNP_static_cusparse(uint n, uint m, int mode, int verbosity) : SNP_model(n,m, mode, verbosity){
-    
+
     CHECK_CUSPARSE(cusparseCreate(&(this->cusparse_handle)));
+
+    CHECK_CUSPARSE(cusparseSetStream(this->cusparse_handle, this->stream2));
+
+
     //Allocate cpu variables
     this -> cublas_spiking_vector = (float*) malloc(sizeof(float)*m);
     memset(this->cublas_spiking_vector,0,  sizeof(float)*m);
@@ -97,7 +101,7 @@ SNP_static_cusparse::SNP_static_cusparse(uint n, uint m, int mode, int verbosity
     
     cudaMalloc((&this->d_trans_matrix),  sizeof(int)*n*m);
 
-    this -> nnz = (int*) malloc(sizeof(int));
+    cudaMallocHost(&this->nnz,sizeof(int));
     memset(this->nnz,0,  sizeof(int));
 
     cudaMalloc((&this->d_nnz),  sizeof(int));
@@ -316,7 +320,13 @@ __global__ void count_nnz(int * trans_matrix, int nrows, int ncols, int * nnz){
     
 }
 
-
+__global__ void cpy_conf_vector_cusparse(float * conf_v, int *conf_v_cpy, int n){
+    int idx = threadIdx.x + blockDim.x * blockIdx.x;
+    if(idx<n){
+        printf("%.1f",conf_v_cpy[idx]);
+        conf_v_cpy[idx]= (int) conf_v[idx];
+    }
+}
 
 
 void SNP_static_cusparse::calc_transition()
@@ -330,21 +340,22 @@ void SNP_static_cusparse::calc_transition()
     //trans_mx changes only when delays are active. If inactive, no need to build new compressed mx.
     if(this->delays_active || this->step == 0){
 
-        cudaMemset(this->d_nnz,0,sizeof(int));
+        cudaMemset(this->d_nnz,0,sizeof(int)); //use stream2
         count_nnz<<<n+255,256>>>(d_trans_matrix, n, m, d_nnz);
-        cudaMemcpy(nnz, d_nnz,  sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(nnz, d_nnz,  sizeof(int), cudaMemcpyDeviceToHost); 
         
         // printf("nnz addr:%p\n", nnz);
         if(this->step == 0){
             this->nnz0=nnz[0];
+            printf("non-zero values: %d\n",nnz0);
             CHECK_CUDA(cudaMalloc(&(this->d_csrColumns),  sizeof(int)*nnz[0]));
-            cudaMalloc(&(this->d_csrValues),  sizeof(float)*nnz[0]);
-            cudaMalloc((&this->d_csrOffsets),  sizeof(int)*n+1);
+            cudaMalloc(&(this->d_csrValues),  sizeof(float)*nnz[0]); 
+            cudaMalloc((&this->d_csrOffsets),  sizeof(int)*n+1); 
 
         }
         
         
-        cusparse_gen_CSR_vectors<<<1,1>>>(d_trans_matrix, n, m, d_csrOffsets,d_csrColumns, d_csrValues); //TODO: maybe create each of the three vectors in a different thread (much better performace?)
+        cusparse_gen_CSR_vectors<<<1,1,0,this->stream2>>>(d_trans_matrix, n, m, d_csrOffsets,d_csrColumns, d_csrValues); //TODO: maybe create each of the three vectors in a different thread (much better performace?)
 
         // Create sparse matrix A in CSR format
         CHECK_CUSPARSE( cusparseCreateCsr(&(this->cusparse_trans_mx), n, m, nnz[0],
@@ -361,7 +372,7 @@ void SNP_static_cusparse::calc_transition()
             this->cusparse_handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
             &alpha, this->cusparse_trans_mx, this->cusparse_spkv, &beta, this->cusparse_confv, CUDA_R_32F,
             CUSPARSE_MV_ALG_DEFAULT, &this->bufferSize) );
-        CHECK_CUDA( cudaMalloc(&(this->d_buffer),   this->bufferSize) );
+        CHECK_CUDA( cudaMalloc(&(this->d_buffer),   this->bufferSize) ); 
         this->buffer_created = true;
 
     }
@@ -380,15 +391,17 @@ void SNP_static_cusparse::calc_transition()
     }
     // CHECK_CUSPARSE( cusparseDestroyDnVec(cusparse_spkv) );
     
-
+    
+    CHECK_CUDA(cudaGetLastError())
     //updating spikes and delays
     
-    cusparse_update_spiking_and_delays<<<n+255,256>>>(d_cublas_spiking_vector, d_cublas_spiking_vector_aux, d_delays_vector, d_rule_index, n, m);
-    cudaDeviceSynchronize();
-
-    cudaMemset(d_csrValues,0,nnz0);
+    cusparse_update_spiking_and_delays<<<n+255,256,0,this->stream2>>>(d_cublas_spiking_vector, d_cublas_spiking_vector_aux, d_delays_vector, d_rule_index, n, m);
+    cudaMemset(d_csrValues,0,nnz0); 
     cudaMemset(d_csrColumns,0,nnz0);
-    this->step++;
+    cudaStreamSynchronize(this->stream1);
+    cpy_conf_vector_cusparse<<<n+255,256,0,this->stream2>>>(d_cublas_conf_vector, d_conf_vector_cpy, n);
+    cudaDeviceSynchronize();
+    
 
 }
 
