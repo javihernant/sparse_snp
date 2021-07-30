@@ -119,7 +119,7 @@ SNP_static_cusparse::~SNP_static_cusparse()
     free(this->trans_matrix);
     cudaFree(this->d_trans_matrix);
 
-    free(this->nnz);
+    cudaFreeHost(this->nnz);
     cudaFree(this->d_nnz);
 
     cudaFree(this->d_csrColumns);
@@ -172,7 +172,7 @@ void SNP_static_cusparse::include_synapse(uint i, uint j)
 void SNP_static_cusparse::load_transition_matrix () 
 {   
 
-    cudaMemcpy(d_trans_matrix,  trans_matrix,   sizeof(int)*n*m,  cudaMemcpyHostToDevice); 
+    cudaMemcpyAsync(d_trans_matrix,  trans_matrix,   sizeof(int)*n*m,  cudaMemcpyHostToDevice, this->stream2); 
 
     // TODO The following should be done in another function, but for simplicity I put it here
     // TODO check if we need to set matrices for spiking and configuration vectors
@@ -195,6 +195,30 @@ void SNP_static_cusparse::load_transition_matrix ()
     if (threadIdx.x==0)
         w[n] = acum;
 }*/
+
+__global__ void cusparse_update_spiking_and_delays(float* spiking_vector, float* spiking_vector_aux, int * delays_vector, int * rule_index, int n, int m){
+    //d_cublas_spiking_vector, d_cublas_spiking_vector_aux, d_delays_vector, d_rule_index, n, m)
+    int nid = threadIdx.x+blockIdx.x*blockDim.x;
+    //nid<n
+    if (nid<n){
+        for (int r=rule_index[nid]; r<rule_index[nid+1]; r++){
+            if(spiking_vector_aux[r]==1){
+                spiking_vector[r]=0;
+            } 
+        }
+
+        if(delays_vector[nid]>0){
+            delays_vector[nid]--;
+        }
+
+
+
+        // printf("%d ",conf_vector[nid]);
+    }
+
+
+}
+
 __global__ void cusparse_kalc_spiking_vector(float* spiking_vector, float* spiking_vector_aux, int* trans_matrix, int* delays_vector, uint* rd, float* conf_vector, int* rule_index,int* rc, int* rei, int* ren, uint n, uint m)
 {
     //TODO: Comprobar q funciona para cusparse
@@ -258,16 +282,30 @@ __global__ void cusparse_kalc_spiking_vector(float* spiking_vector, float* spiki
     }
 }
 
+__global__ void empty_v(float * v,int size){
+    int idx=threadIdx.x + blockDim.x*blockIdx.x;
+    if(idx<size){
+        v[idx] = 0;
+
+    }
+}
+
 void SNP_static_cusparse::calc_spiking_vector() 
 {
-    
+    if(this->step>=1){
+        cusparse_update_spiking_and_delays<<<n+255,256,0,this->stream2>>>(d_cublas_spiking_vector, d_cublas_spiking_vector_aux, d_delays_vector, d_rule_index, n, m);
+        cudaMemset(d_csrValues,0,nnz0); 
+        cudaMemset(d_csrColumns,0,nnz0);
+
+    }
     uint bs = 256;
     uint gs = (n+255)/256;
-    // CHECK_CUDA(cudaMemset((void *) &this->d_cublas_spiking_vector_aux, 0, sizeof(int)*m));
-    thrust::device_ptr<float> dev_ptr(this->d_cublas_spiking_vector_aux);
-    thrust::fill(dev_ptr, dev_ptr + m, 0.0f);
-    cusparse_kalc_spiking_vector<<<gs,bs>>>(d_cublas_spiking_vector, d_cublas_spiking_vector_aux, d_trans_matrix, d_delays_vector, d_rules.d, d_cublas_conf_vector, d_rule_index,d_rules.c, d_rules.Ei, d_rules.En, n, m);
-    cudaDeviceSynchronize();
+    
+    // thrust::device_ptr<float> dev_ptr(this->d_cublas_spiking_vector_aux);
+    // thrust::fill(dev_ptr, dev_ptr + m, 0.0f);
+    empty_v<<<gs,bs,0,this->stream2>>>(this->d_cublas_spiking_vector_aux,m);
+    cusparse_kalc_spiking_vector<<<gs,bs,0,this->stream2>>>(d_cublas_spiking_vector, d_cublas_spiking_vector_aux, d_trans_matrix, d_delays_vector, d_rules.d, d_cublas_conf_vector, d_rule_index,d_rules.c, d_rules.Ei, d_rules.En, n, m);
+    
 
     //send spiking_vector and delays_vector to host in order to decide if stop criterion has been reached
     // checkErr2(cudaMemcpy(cublas_spiking_vector, d_cublas_spiking_vector,  sizeof(float)*m, cudaMemcpyDeviceToHost));
@@ -280,28 +318,7 @@ void SNP_static_cusparse::calc_spiking_vector()
 
 }
 
-__global__ void cusparse_update_spiking_and_delays(float* spiking_vector, float* spiking_vector_aux, int * delays_vector, int * rule_index, int n, int m){
-    //d_cublas_spiking_vector, d_cublas_spiking_vector_aux, d_delays_vector, d_rule_index, n, m)
-    int nid = threadIdx.x+blockIdx.x*blockDim.x;
-    //nid<n
-    if (nid<n){
-        for (int r=rule_index[nid]; r<rule_index[nid+1]; r++){
-            if(spiking_vector_aux[r]==1){
-                spiking_vector[r]=0;
-            } 
-        }
 
-        if(delays_vector[nid]>0){
-            delays_vector[nid]--;
-        }
-
-
-
-        // printf("%d ",conf_vector[nid]);
-    }
-
-
-}
 
 __global__ void count_nnz(int * trans_matrix, int nrows, int ncols, int * nnz){
     //counts number of non-zero elements.
@@ -320,13 +337,7 @@ __global__ void count_nnz(int * trans_matrix, int nrows, int ncols, int * nnz){
     
 }
 
-__global__ void cpy_conf_vector_cusparse(float * conf_v, int *conf_v_cpy, int n){
-    int idx = threadIdx.x + blockDim.x * blockIdx.x;
-    if(idx<n){
-        printf("%.1f",conf_v_cpy[idx]);
-        conf_v_cpy[idx]= (int) conf_v[idx];
-    }
-}
+
 
 
 void SNP_static_cusparse::calc_transition()
@@ -347,7 +358,7 @@ void SNP_static_cusparse::calc_transition()
         // printf("nnz addr:%p\n", nnz);
         if(this->step == 0){
             this->nnz0=nnz[0];
-            printf("non-zero values: %d\n",nnz0);
+            // printf("non-zero values: %d\n",nnz0);
             CHECK_CUDA(cudaMalloc(&(this->d_csrColumns),  sizeof(int)*nnz[0]));
             cudaMalloc(&(this->d_csrValues),  sizeof(float)*nnz[0]); 
             cudaMalloc((&this->d_csrOffsets),  sizeof(int)*n+1); 
@@ -394,13 +405,12 @@ void SNP_static_cusparse::calc_transition()
     
     CHECK_CUDA(cudaGetLastError())
     //updating spikes and delays
+
     
-    cusparse_update_spiking_and_delays<<<n+255,256,0,this->stream2>>>(d_cublas_spiking_vector, d_cublas_spiking_vector_aux, d_delays_vector, d_rule_index, n, m);
-    cudaMemset(d_csrValues,0,nnz0); 
-    cudaMemset(d_csrColumns,0,nnz0);
-    cudaStreamSynchronize(this->stream1);
-    cpy_conf_vector_cusparse<<<n+255,256,0,this->stream2>>>(d_cublas_conf_vector, d_conf_vector_cpy, n);
-    cudaDeviceSynchronize();
+    
+    // cudaStreamSynchronize(this->stream1);
+    
+    // cudaDeviceSynchronize();
     
 
 }

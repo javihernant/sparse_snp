@@ -170,7 +170,7 @@ void testDelays(int verbosity){
 	uint m = 5; //num reglas
 	uint n = 3; //num neuronas
 	
-	SNP_static_cusparse TestModel(n, m, GPU_CUSPARSE, verbosity);
+	SNP_static TestModel(n, m, GPU_SPARSE, verbosity);
 	int C0[3] = {0,1,1};
 	for (int i=0; i<n; i++){
 		TestModel.set_spikes (i, C0[i]);

@@ -111,6 +111,7 @@ protected:
     bool gpu_updated =0;           // true if GPU copy is updated
     bool cpu_updated =0;           // true if CPU copy is updated
     bool done_rules = 0;            // true if all rules have been introduced (preventing adding synapses)
+    cudaEvent_t done_k_spkv_cpy;
 
     // auxiliary methods
     void printSpikingV();

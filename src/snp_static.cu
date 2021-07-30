@@ -118,12 +118,12 @@ void SNP_static::calc_spiking_vector()
 {
     uint bs = 256;
     uint gs = (n+255)/256;
-    kalc_spiking_vector<<<gs,bs>>>(d_spiking_vector, d_delays_vector, d_rules.d, d_conf_vector, d_rule_index,d_rules.c, d_rules.Ei, d_rules.En, n);
-    cudaDeviceSynchronize();
+    kalc_spiking_vector<<<gs,bs,0,this->stream2>>>(d_spiking_vector, d_delays_vector, d_rules.d, d_conf_vector, d_rule_index,d_rules.c, d_rules.Ei, d_rules.En, n);
+    
 
     //send spiking_vector and delays_vector to host in order to decide if stop criterion has been reached
-    cudaMemcpy(spiking_vector, d_spiking_vector,  sizeof(int)*m, cudaMemcpyDeviceToHost);
-    cudaMemcpy(delays_vector, d_delays_vector,  sizeof(int)*n, cudaMemcpyDeviceToHost);
+    // cudaMemcpy(spiking_vector, d_spiking_vector,  sizeof(int)*m, cudaMemcpyDeviceToHost);
+    // cudaMemcpy(delays_vector, d_delays_vector,  sizeof(int)*n, cudaMemcpyDeviceToHost);
 
 
 }
@@ -160,10 +160,8 @@ __global__ void update_delays_vector_static(int * delays_vector, int n){
 
 void SNP_static::calc_transition()
 {
-    kalc_transition<<<n+255,256>>>(d_spiking_vector,d_trans_matrix, d_conf_vector, d_delays_vector, d_rules.nid,n,m);
-    cudaDeviceSynchronize();
-    update_delays_vector_static<<<n+255,256>>>(d_delays_vector, n);
-    cudaDeviceSynchronize();
+    kalc_transition<<<n+255,256,0,this->stream2>>>(d_spiking_vector,d_trans_matrix, d_conf_vector, d_delays_vector, d_rules.nid,n,m);
+    update_delays_vector_static<<<n+255,256,0, this->stream2>>>(d_delays_vector, n);
 
 }
 

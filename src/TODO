@@ -1,3 +1,6 @@
+-Con Verbosity 3 se envían al host (además de cada config) los vectores de delays, spk,spk_aux, matrix (si se usa cusparse o cublas).
+
+
 -Poner cada estructura en su .hpp correspondiente (ie. cublas_spiking_vector en cublas static.hpp)
 -Vectores auxiliares se deben llamar de misma manera. Poner en .hpp de cublas en float y en cusparse en int.
 -Existe una funcion para crear los vectores auxiliares para la compressed matrix (q calcula el nnz)
