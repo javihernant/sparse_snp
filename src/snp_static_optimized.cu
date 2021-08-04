@@ -10,6 +10,16 @@
 
 using namespace std;
 
+#define CHECK_CUDA(func)                                                       \
+{                                                                              \
+    cudaError_t status = (func);                                               \
+    if (status != cudaSuccess) {                                               \
+        printf("CUDA API failed at line %d with error: %s (%d)\n",             \
+               __LINE__, cudaGetErrorString(status), status);                  \
+                                                          \
+    }                                                                          \
+}
+
 
 /** Allocation */
 SNP_static_optimized::SNP_static_optimized(uint n, uint m, int mode, int verbosity) : SNP_model(n,m, mode, verbosity)
@@ -23,8 +33,8 @@ SNP_static_optimized::SNP_static_optimized(uint n, uint m, int mode, int verbosi
     memset(this->z_vector,0,sizeof(int)*n);
 
     //Allocate device variables
-    cudaMalloc((&this->d_spiking_vector),  sizeof(int)*n);
-    cudaMemset(&this->d_spiking_vector, -1, sizeof(int)*n);
+    cudaMalloc((void **)(&this->d_spiking_vector),  sizeof(int)*n);
+    CHECK_CUDA(cudaMemset(this->d_spiking_vector, -1, sizeof(int)*n));
     
     //d_trans_matrix allocated when z is known
 
@@ -130,7 +140,7 @@ __global__ void printVectors_opt_K(int* spkv, int * delays, int neurons){
 __global__ void kalc_transition_optimized(int* spiking_vector, int* trans_matrix, int* conf_vector, int* delays_vector, int* rc, int* rp, int z, int n){
     int nid = threadIdx.x+blockIdx.x*blockDim.x;
 
-    if(nid<n && delays_vector[nid]==0){
+    if(nid<n && spiking_vector[nid]>=0 && delays_vector[nid]==0){
         int rid = spiking_vector[nid];
         spiking_vector[nid]= -1;
         int p = rp[rid];
@@ -139,11 +149,12 @@ __global__ void kalc_transition_optimized(int* spiking_vector, int* trans_matrix
 
         for(int j=0; j<z; j++){
             
-            int n_j = trans_matrix[j*n+nid];
+            int n_j = trans_matrix[j*n+nid]; //nid is connected to n_j. 
 
-            if(delays_vector[n_j]>0) break;
+            
 
             if(n_j >= 0){
+                if(delays_vector[n_j]>0) break;
                 atomicAdd((int *) &conf_vector[n_j], p);
 
 
