@@ -32,7 +32,6 @@ protected:
     void printTransMX();
     void include_synapse(uint i, uint j);
     void calc_spiking_vector();
-    void init_compressed_matrix();
     void load_transition_matrix();
     void calc_transition();
 

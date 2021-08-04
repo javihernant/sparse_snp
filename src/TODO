@@ -1,3 +1,4 @@
+-arreglar optimized
 -Con Verbosity 3 se envían al host (además de cada config) los vectores de delays, spk,spk_aux, matrix (si se usa cusparse o cublas).
 
 

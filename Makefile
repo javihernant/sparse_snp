@@ -40,10 +40,9 @@ NLDFlags=-lm -lcublas -lcusparse -Xcompiler $(OMP) -L$(CUDA_PATH)/lib64
 XCC=$(NCC) 	
 XLD=$(NLDFlags)
 
-
 ifeq ($(dbg),1)
-	CFlags += -O0 -g
-	NCFlags += -O0 -g -G
+	CFlags += -O0 -g -lineinfo
+	NCFlags += -O0 -g -lineinfo
 else	
 	CFlags += -O3
 	NCFlags += -O3

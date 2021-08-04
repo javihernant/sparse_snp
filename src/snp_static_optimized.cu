@@ -4,6 +4,7 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <iostream>
+#include <snp_model.hpp>
 
 #include <snp_static.hpp> 
 
@@ -101,11 +102,27 @@ void SNP_static_optimized::calc_spiking_vector()
     uint bs = 256;
     uint gs = (n+255)/256;
     
-    kalc_spiking_vector_optimized<<<gs,bs>>>(d_spiking_vector, d_conf_vector, d_delays_vector, d_rule_index, d_rules.c, d_rules.d, d_rules.nid, d_rules.Ei, d_rules.En, n);
-    cudaDeviceSynchronize();
-    cudaMemcpy(spiking_vector, d_spiking_vector,  sizeof(int)*n, cudaMemcpyDeviceToHost);
-    cudaMemcpy(delays_vector, d_delays_vector,  sizeof(int)*n, cudaMemcpyDeviceToHost);
+    kalc_spiking_vector_optimized<<<gs,bs,0,this->stream2>>>(d_spiking_vector, d_conf_vector, d_delays_vector, d_rule_index, d_rules.c, d_rules.d, d_rules.nid, d_rules.Ei, d_rules.En, n);
+    // cudaMemcpy(spiking_vector, d_spiking_vector,  sizeof(int)*n, cudaMemcpyDeviceToHost);
+    // cudaMemcpy(delays_vector, d_delays_vector,  sizeof(int)*n, cudaMemcpyDeviceToHost);
 
+
+}
+
+__global__ void printVectors_opt_K(int* spkv, int * delays, int neurons){
+
+    
+    printf("Spiking_vector:");
+    for(int i=0; i<neurons; i++){
+        printf("%d ",spkv[i]);
+        
+    }
+    printf("\n");
+    printf("Delays_v:");
+    for(int i=0; i<neurons; i++){
+        printf("%d ",delays[i]);
+    }
+    printf("\n");
 
 }
 
@@ -147,8 +164,9 @@ __global__ void kalc_transition_optimized(int* spiking_vector, int* trans_matrix
 
 void SNP_static_optimized::calc_transition()
 {
+    printVectors_opt_K<<<1,1,0,this->stream2>>>(d_spiking_vector,d_delays_vector, n);
     kalc_transition_optimized<<<n+255,256,0,this->stream2>>>(d_spiking_vector,d_trans_matrix, d_conf_vector, d_delays_vector, d_rules.c, d_rules.p, z,n);
-    cudaDeviceSynchronize();
+    
 
 
     
