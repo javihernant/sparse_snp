@@ -206,6 +206,88 @@ void testDelays(int verbosity){
 
 }
 
+void testSubsetSumNonUniformDelays(int S, int * v, int v_size, int verbosity, int repetition){
+
+	if(verbosity>=3){
+		printf("test repetition #%d",repetition);
+	}	
+	int sum_of_v = 0;
+	for(int i=0; i<v_size; i++){
+		sum_of_v += v[i];
+	}
+
+	uint n = v_size*2 + sum_of_v +3; //num neuronas
+	uint m = v_size*2*2 + sum_of_v + 2; //num reglas
+	
+	
+	SNP_static TestModel(n, m, GPU_SPARSE, verbosity);
+
+	for (int i=0; i<v_size+1; i++){
+		TestModel.set_spikes (i, 1);
+	}
+
+
+	//Adding rules. add_rule (uint nid, short e_n, short e_i, short c, short p, ushort d)
+	TestModel.add_rule(0, 1, 1, 1, 1,0);
+	for (int i=1; i<v_size+1; i++){
+		//TODO non-determinism
+		TestModel.add_rule(i, 1, 1, 1, 1,0);
+		TestModel.add_rule(i, 1, 1, 1, 1,0);
+	}
+
+	for (int i=v_size; i<v_size*2+1; i++){
+		
+		TestModel.add_rule(i, 2, 1, 2, 1,0);
+		TestModel.add_rule(i, 1, 1, 1, 0,0);
+	}
+
+	int neuron = v_size*3;
+	for (int i=0; i<v_size; i++){
+		//TODO non-determinism
+		for(int c=0; c<v[i]; c++){
+			
+			TestModel.add_rule(neuron, 1, 1, 1, 1,0);
+			neuron++;
+		}
+		
+		
+	}
+	TestModel.add_rule(neuron, 1, 1, 1, 1,0);
+	
+	//Adding synapses
+
+	for (int i=v_size; i<v_size*2+1; i++){
+		TestModel.add_synapse(0,i);
+	}
+
+	for (int i=1; i<v_size+1; i++){
+		TestModel.add_synapse(i,v_size*2+i-1);
+	}
+
+	int j_n = v_size*3;
+	for (int i=0; i<v_size; i++){
+		int i_n = v_size*2+ i;
+		for(int c=0; c<v[i]; c++){
+			
+			TestModel.add_synapse(i_n,j_n);
+			j_n++;
+		}
+			
+	}
+
+	for(int i_n=v_size*3; i_n<j_n; i_n++){
+		TestModel.add_synapse(i_n,j_n+1);
+
+	}
+	TestModel.add_synapse(j_n+1, j_n+2);
+	//synapse to enviroment neuron
+
+	TestModel.compute(4); //4 steps at most, 2 at minimum
+	
+	
+
+}
+
 
 int main(int argc, char* argv[])
 {
@@ -234,9 +316,26 @@ int main(int argc, char* argv[])
 		}
 
 	}
-    
+
+	int numOfRepetitions = 100;
+	int v_size = 10;
+	int v[v_size];
+	int S=0;
+	for(int i=0; i<v_size; i++){
+		
+		v[i] = ( 1+ std::rand() % ( 10 + 1 ) ); //generates a number in the range 0-50
+
+
+		if((std::rand() % 100)<20){ //20% of the time the element will be chosen for the total sum (S)
+			S+=v[i];
+		}
+	}
+	for (int i=0; i<numOfRepetitions; i++){
+		testSubsetSumNonUniformDelays(S, v, v_size, verbosity, i);
+	}    
 	
-	testDelays(verbosity);
+	
+	// testDelays(verbosity);
 
 	// int size = 10;
 	// int nums[size];
@@ -245,8 +344,7 @@ int main(int argc, char* argv[])
 	// }
 	// testOrdenarNums(nums,size, debug);
 
-	//testSNP_gpu();
-	// testSNP_cpu();
+	
 
 	
 
