@@ -208,8 +208,8 @@ void testDelays(int verbosity){
 
 void testSubsetSumNonUniformDelays(int S, int * v, int v_size, int verbosity, int repetition){
 
-	if(verbosity>=3){
-		printf("test repetition #%d",repetition);
+	if(verbosity>=1){
+		printf("test repetition #%d\n",repetition);
 	}	
 	int sum_of_v = 0;
 	for(int i=0; i<v_size; i++){
@@ -229,44 +229,51 @@ void testSubsetSumNonUniformDelays(int S, int * v, int v_size, int verbosity, in
 
 	//Adding rules. add_rule (uint nid, short e_n, short e_i, short c, short p, ushort d)
 	TestModel.add_rule(0, 1, 1, 1, 1,0);
-	for (int i=1; i<v_size+1; i++){
-		//TODO non-determinism
-		TestModel.add_rule(i, 1, 1, 1, 1,0);
-		TestModel.add_rule(i, 1, 1, 1, 1,0);
+	for (int i=1; i<=v_size; i++){
+		if((std::rand() % 2)==0){
+			TestModel.add_rule(i, 1, 1, 1, 1,0);
+			TestModel.add_rule(i, 1, 1, 1, 1,1);
+		}else{
+			TestModel.add_rule(i, 1, 1, 1, 1,1);
+			TestModel.add_rule(i, 1, 1, 1, 1,0);
+
+		}
+		
 	}
 
-	for (int i=v_size; i<v_size*2+1; i++){
+	
+	for (int i=v_size+1; i<=v_size*2; i++){
 		
 		TestModel.add_rule(i, 2, 1, 2, 1,0);
 		TestModel.add_rule(i, 1, 1, 1, 0,0);
 	}
 
-	int neuron = v_size*3;
+	int neuron = v_size*2+1;
+	
 	for (int i=0; i<v_size; i++){
-		//TODO non-determinism
-		for(int c=0; c<v[i]; c++){
-			
-			TestModel.add_rule(neuron, 1, 1, 1, 1,0);
-			neuron++;
+		
+		for(int offset=0; offset<v[i]; offset++){
+			TestModel.add_rule(neuron+offset, 1, 1, 1, 1,0);
 		}
+		neuron+=v[i];
 		
 		
 	}
-	TestModel.add_rule(neuron, 1, 1, 1, 1,0);
+	TestModel.add_rule(neuron, S, 1, S, 1,0);
 	
 	//Adding synapses
 
-	for (int i=v_size; i<v_size*2+1; i++){
+	for (int i=v_size+1; i<=v_size*2; i++){
 		TestModel.add_synapse(0,i);
 	}
 
-	for (int i=1; i<v_size+1; i++){
-		TestModel.add_synapse(i,v_size*2+i-1);
+	for (int i=1; i<=v_size; i++){
+		TestModel.add_synapse(i,v_size*2+i);
 	}
 
-	int j_n = v_size*3;
+	int j_n = v_size*2 + 1;
 	for (int i=0; i<v_size; i++){
-		int i_n = v_size*2+ i;
+		int i_n = v_size+1+ i;
 		for(int c=0; c<v[i]; c++){
 			
 			TestModel.add_synapse(i_n,j_n);
@@ -275,12 +282,14 @@ void testSubsetSumNonUniformDelays(int S, int * v, int v_size, int verbosity, in
 			
 	}
 
-	for(int i_n=v_size*3; i_n<j_n; i_n++){
-		TestModel.add_synapse(i_n,j_n+1);
+	//connecting to output neuron
+	for(int i_n=v_size*2+1; i_n<j_n; i_n++){
+		TestModel.add_synapse(i_n,j_n); 
 
 	}
-	TestModel.add_synapse(j_n+1, j_n+2);
-	//synapse to enviroment neuron
+	//connecting out_neuron to enviroment neuron
+	TestModel.add_synapse(j_n, j_n+1);
+	
 
 	TestModel.compute(4); //4 steps at most, 2 at minimum
 	

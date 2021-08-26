@@ -89,7 +89,6 @@ __global__ void kalc_spiking_vector(int* spiking_vector, int* delays_vector, uin
     uint nid = threadIdx.x+blockIdx.x*blockDim.x;
 
     if (nid<n && delays_vector[nid]==0) {
-
         
         for (int r=rule_index[nid]; r<rule_index[nid+1]; r++){
 
@@ -150,6 +149,24 @@ __global__ void kalc_transition(int* spiking_vector, int* trans_matrix, int* con
 
 }
 
+__global__ void printVectors_sp_K(int* spkv, int spkv_size, int * delays, int neurons){
+
+    
+    printf("Spiking_vector:");
+    for(int i=0; i<spkv_size; i++){
+        printf("%d ",spkv[i]);
+        
+    }
+    printf("\n");
+    printf("Delays_v:");
+    for(int i=0; i<neurons; i++){
+        printf("%d ",delays[i]);
+    }
+    printf("\n");
+
+}
+
+
 __global__ void update_delays_vector_static(int * delays_vector, int n){
     
     int nid = threadIdx.x+blockIdx.x*blockDim.x;
@@ -160,6 +177,10 @@ __global__ void update_delays_vector_static(int * delays_vector, int n){
 
 void SNP_static::calc_transition()
 {
+    if(verbosity>=3){
+        printVectors_sp_K<<<1,1,0,this->stream2>>>(d_spiking_vector, m, d_delays_vector, n);
+    }
+
     kalc_transition<<<n+255,256,0,this->stream2>>>(d_spiking_vector,d_trans_matrix, d_conf_vector, d_delays_vector, d_rules.nid,n,m);
     update_delays_vector_static<<<n+255,256,0, this->stream2>>>(d_delays_vector, n);
 

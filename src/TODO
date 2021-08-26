@@ -1,5 +1,5 @@
--arreglar optimized
--Con Verbosity 3 se envían al host (además de cada config) los vectores de delays, spk,spk_aux, matrix (si se usa cusparse o cublas).
+-computacion en verbosity=1 no funciona bien
+-Con Verbosity 3 se envían al host (además de cada config) los vectores de delays, spk,spk_aux, matrix (si se usa cusparse o cublas). (no hacer por ahora)
 
 
 -Poner cada estructura en su .hpp correspondiente (ie. cublas_spiking_vector en cublas static.hpp)

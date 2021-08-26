@@ -65,7 +65,12 @@ SNP_model::SNP_model(uint n, uint m, int mode, int verbosity)
     this->rules.p         = (int*)  malloc(sizeof(int)*m); // RHS of rule
     this->rules.d = (uint*) malloc(sizeof(uint)*(m));
     this->rules.nid       = (uint*)   malloc(sizeof(uint)*(m)); // Index of the neuron where the rule is
-    cudaMallocHost(&this->calc_next_trans, sizeof(bool));
+    if(this->verbosity>=2){
+        cudaMallocHost(&this->calc_next_trans, sizeof(bool));
+    }else{
+        cudaMalloc(&this->calc_next_trans, sizeof(bool));
+    }
+    
 
     // initialization (only in CPU, having updated version)
     
@@ -126,7 +131,12 @@ SNP_model::~SNP_model()
     free(this->rules.p);
     free(this->rules.d);
     free(this->rules.nid);
-    cudaFreeHost(this->calc_next_trans);
+    if(this->verbosity>=2){
+        cudaFreeHost(this->calc_next_trans);
+    }else{
+        cudaFree(this->calc_next_trans);
+    }
+    
     
 
     
@@ -426,12 +436,11 @@ bool SNP_model::transition_step()
             cpy_conf_vector<<<n+255,256,0,this->stream1>>>(d_cublas_conf_vector, d_conf_vector_cpy, n);
 
         }else{
-            cpy_conf_vector<<<n+255,256,0,this->stream1>>>(d_conf_vector, d_conf_vector_cpy, n);
+            cpy_conf_vector<<<n+255,256,0,this->stream1>>>(d_conf_vector, d_conf_vector_cpy, n); //makes a copy of the conf_vector which will be sent to host while, at the same time, computation is performed.
 
         }
         cudaStreamSynchronize(this->stream1); //finish copy before transition is made
         load_to_cpu(this->stream1); 
-        cpu_updated=true;
  
     }
 
@@ -439,14 +448,30 @@ bool SNP_model::transition_step()
     calc_spiking_vector(); 
     int spv_size= ex_mode == GPU_OPTIMIZED ? n : m;
     if(ex_mode == GPU_CUBLAS || ex_mode ==GPU_CUSPARSE){
-        does_it_calc_nxt_cu<<<1,1,0,this->stream2>>>(d_calc_next_trans, d_cublas_spiking_vector, d_cublas_spiking_vector_aux,spv_size, d_delays_vector, n, verbosity);
+        if(this->verbosity>=2){
+            does_it_calc_nxt_cu<<<1,1,0,this->stream2>>>(d_calc_next_trans, d_cublas_spiking_vector, d_cublas_spiking_vector_aux,spv_size, d_delays_vector, n, verbosity);
+        }else{
+            does_it_calc_nxt_cu<<<1,1>>>(d_calc_next_trans, d_cublas_spiking_vector, d_cublas_spiking_vector_aux,spv_size, d_delays_vector, n, verbosity);
+
+        }
     }else{
-        does_it_calc_nxt<<<1,1,0,this->stream2>>>(d_calc_next_trans, d_spiking_vector, spv_size, d_delays_vector, n, ex_mode, verbosity);
+        if(this->verbosity>=2){
+            does_it_calc_nxt<<<1,1,0,this->stream2>>>(d_calc_next_trans, d_spiking_vector, spv_size, d_delays_vector, n, ex_mode, verbosity);
+
+        }else{
+            does_it_calc_nxt<<<1,1>>>(d_calc_next_trans, d_spiking_vector, spv_size, d_delays_vector, n, ex_mode, verbosity);
+
+        }
     }
     
-    CHECK_CUDA(cudaMemcpyAsync(this->calc_next_trans, this->d_calc_next_trans, sizeof(bool),cudaMemcpyDeviceToHost,this->stream2));
+    if(this->verbosity>=2){
+        CHECK_CUDA(cudaMemcpyAsync(this->calc_next_trans, this->d_calc_next_trans, sizeof(bool),cudaMemcpyDeviceToHost,this->stream2));
     
-    cudaStreamSynchronize(this->stream2);
+        cudaStreamSynchronize(this->stream2);
+    }else{
+        cudaMemcpy(this->calc_next_trans, this->d_calc_next_trans, sizeof(bool),cudaMemcpyDeviceToHost); ///////////////
+    }
+    
 
     if(this->calc_next_trans[0]){
         //wait until cpy_conf_vector_cusparse has finished
@@ -484,17 +509,16 @@ bool SNP_model::transition_step()
         return false;
     }
 
-    if(this->verbosity==1){
-        cpu_updated=true;
-        printConfV();
+    if(this->verbosity==0 || this->verbosity==1){
+        load_to_cpu(NULL); 
+        
+        
     }
-    if(this->verbosity>=2){
-        if(this->verbosity==1){
-            load_to_cpu(NULL); 
-        }
+    if(this->verbosity>=1){
         if(this->verbosity>=2){
             cudaStreamSynchronize(this->stream1);
         }
+        
         printConfV();
         printf("\n---------------------------------------\n");
         

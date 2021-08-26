@@ -45,7 +45,7 @@ public:
     /** 
      * Simulate a computation of the model. 
      * Optionally, set a limit to l steps */
-    void compute(int l=1) { while(l-->=1 && !transition_step()); }; // or
+    void compute(int l=1) { while(l-->=1 || !transition_step()); };
     // void compute(int l=1) { while(l-->=1) transition_step(); };
 
 protected:
