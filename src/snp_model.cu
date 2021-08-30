@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <assert.h> //#define assert
 #include <cuda.h>
+#include <format>
 
 #include <snp_model.hpp>  // "../include/snp_model.hpp" //
 // Algorithms
@@ -29,14 +30,16 @@ using namespace std;
 SNP_model::SNP_model(uint n, uint m, int mode, int verbosity)
 {
     
-    
+    cudaProfilerStart();
     // allocation in CPU
     this->m = m;  // number of rules
     this->n = n;  // number of neurons
     this->ex_mode = mode;
     this->verbosity = verbosity;
     this->step = 0;
-
+    if(write_CSV){
+        this->csv.open("conf_vs.csv");
+    }
     cudaStreamCreate(&this->stream1);
     CHECK_CUDA(cudaStreamCreateWithFlags(&this->stream2, cudaStreamNonBlocking));
     
@@ -68,7 +71,7 @@ SNP_model::SNP_model(uint n, uint m, int mode, int verbosity)
     if(this->verbosity>=2){
         cudaMallocHost(&this->calc_next_trans, sizeof(bool));
     }else{
-        cudaMalloc(&this->calc_next_trans, sizeof(bool));
+        this->calc_next_trans = (bool *) malloc(sizeof(bool));
     }
     
 
@@ -159,6 +162,13 @@ SNP_model::~SNP_model()
     if(this->stream2){
         cudaStreamDestroy(this->stream2);
     }
+
+    if(this->csv){
+        this->csv.close();
+    }
+    
+
+    cudaProfilerStop();
 }
 
 void SNP_model::set_spikes (uint nid, uint s)
@@ -216,7 +226,7 @@ void SNP_model::add_rule (uint nid, int e_n, int e_i, int c, int p, uint d)
     if(rule_index[nid+1]==-1){
         rule_index[nid+1] = rule_index[nid] + 1;
     }else{
-        rule_index[nid+1] = rule_index[nid] + (rule_index[nid+1] - rule_index[nid] + 1);
+        rule_index[nid+1] = rule_index[nid+1] + 1;
     }
     
     
@@ -287,16 +297,26 @@ void SNP_model::printDelaysV(){
 }
 
 void SNP_model::printConfV(){
-
+    if(this->csv){
+        this->csv << std:format("Step #{%d}",this->step);
+    }
+    
     printf("conf_vector= ");
     if(this->step==0 && (ex_mode==GPU_CUBLAS || ex_mode==GPU_CUSPARSE)){
         for(int i=0; i< n; i++){
             printf("{%.0f}",cublas_conf_vector[i]);
+            if(this->csv){
+                csv<< std::format("{%.0f},",cublas_conf_vector[i]);
+            }
             
         }
     }else{
         for(int i=0; i< n; i++){
             printf("{%d}",conf_vector[i]);
+
+            if(this->csv){
+                csv<< std::format("{%d},",conf_vector[i]);
+            }
             
         }   
 
@@ -479,7 +499,7 @@ bool SNP_model::transition_step()
         
         if(this->verbosity>=2){
             cudaStreamSynchronize(this->stream1);
-            printConfV();
+            printConfV(this->write_CSV);
             printf("\n---------------------------------------\n");
         }
 

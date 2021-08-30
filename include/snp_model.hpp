@@ -12,7 +12,8 @@ typedef unsigned char       uchar;
 #include <iostream>
 #include <utility>
 #include "cublas_v2.h"
-
+#include <cuda_profiler_api.h>
+#include <fstream>
 
 class SNP_model
 {
@@ -76,7 +77,8 @@ protected:
         
 
     } rules, d_rules;
-
+    std::ofstream csv;
+    
     // GPU counterpart
     int * d_conf_vector;
     int * d_conf_vector_cpy;
@@ -111,7 +113,6 @@ protected:
     bool gpu_updated =0;           // true if GPU copy is updated
     bool cpu_updated =0;           // true if CPU copy is updated
     bool done_rules = 0;            // true if all rules have been introduced (preventing adding synapses)
-    cudaEvent_t done_k_spkv_cpy;
 
     // auxiliary methods
     void printSpikingV();
