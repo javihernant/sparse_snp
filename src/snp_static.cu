@@ -52,8 +52,8 @@ void SNP_static::include_synapse(uint i, uint j)
 {
     //store by columns for better VxM performance
     for (int r = rule_index[i]; r < rule_index[i+1]; r++) {
-        trans_matrix[i*m+r] = 0;  
-        trans_matrix[j*m+r] = rules.p[r];
+        trans_matrix[r*n+i] = 0;  
+        trans_matrix[r*n+j] = rules.p[r];
     }
 }
 
@@ -129,13 +129,12 @@ void SNP_static::calc_spiking_vector()
 
 __global__ void kalc_transition(int* spiking_vector, int* trans_matrix, int* conf_vector,int * delays_vector, uint * rnid , int n, int m){
     int nid = threadIdx.x+blockIdx.x*blockDim.x;
-    //TODO: a thread for each rule.
     //nid<n
     if (nid<n && delays_vector[nid]==0){
         for (int r=0; r<m; r++){
             //only sum spikes from neurons that are open, even though spiking_vector[r]=1. TODO: In cublas make trans_matrix_copy and make 0 every row of every rule corresponding to a closed neuron.
-            if(delays_vector[rnid[r]] == 0){
-                conf_vector[nid] += spiking_vector[r] * trans_matrix[nid*m+r]; 
+            if(delays_vector[rnid[r]] == 0){ 
+                conf_vector[nid] += spiking_vector[r] * trans_matrix[r*n+nid]; 
                 spiking_vector[r] = 0; //disable rule that has been used
             }
             

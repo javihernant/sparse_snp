@@ -230,6 +230,7 @@ void testSubsetSumNonUniformDelays(int S, int * v, int v_size, int verbosity, in
 	//Adding rules. add_rule (uint nid, short e_n, short e_i, short c, short p, ushort d)
 	TestModel.add_rule(0, 1, 1, 1, 1,0);
 	for (int i=1; i<=v_size; i++){
+		
 		if((std::rand() % 2)==0){
 			TestModel.add_rule(i, 1, 1, 1, 1,0);
 			TestModel.add_rule(i, 1, 1, 1, 1,1);
@@ -330,15 +331,18 @@ int main(int argc, char* argv[])
 	int v_size = 10;
 	int v[v_size];
 	int S=0;
+	int seed = 28;
+	std::srand(seed);
 	for(int i=0; i<v_size; i++){
 		
-		v[i] = ( 1+ std::rand() % ( 10 + 1 ) ); //generates a number in the range 0-50
+		v[i] = ( 1+ std::rand() % ( 10 + 1 ) ); //generates a number in the range 0-10
 
 
 		if((std::rand() % 100)<20){ //20% of the time the element will be chosen for the total sum (S)
 			S+=v[i];
 		}
 	}
+
 	for (int i=0; i<numOfRepetitions; i++){
 		testSubsetSumNonUniformDelays(S, v, v_size, verbosity, i);
 	}    

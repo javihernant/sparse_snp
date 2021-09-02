@@ -20,7 +20,7 @@ CFlags=-c $(OMP) #-Wall
 LDFlags=-lm -lcublas -lcusparse $(OMP) 
 
 ############ NVIDIA specifics
-CUDA_PATH=/usr/local/cuda
+CUDA_PATH=/usr/local/cuda-11.4
 
 NCC=nvcc -ccbin=$(CC)
 #GENCODE_SM20    := -gencode arch=compute_20,code=\"sm_20,compute_20\"
@@ -32,7 +32,7 @@ GENCODE_SM50    := -gencode arch=compute_50,code=\"sm_50,compute_50\"
 GENCODE_FLAGS   := $(GENCODE_SM20) $(GENCODE_SM35) $(GENCODE_SM60)\
                    $(GENCODE_SM61) $(GENCODE_SM75) $(GENCODE_SM50)
 #NCFlags=-c --compiler-options -Wall -Xcompiler $(OMP) $(GENCODE_FLAGS)
-NCFlags=-c $(GENCODE_FLAGS) -I$(CUDA_PATH)/include 
+NCFlags=-c $(GENCODE_FLAGS) -I$(CUDA_PATH)/targets/x86_64-linux/include
 NLDFlags=-lm -lcublas -lcusparse -Xcompiler $(OMP) -L$(CUDA_PATH)/lib64
 ############
 

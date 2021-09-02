@@ -59,9 +59,10 @@ void SNP_static_ell::include_synapse(uint i, uint j)
     //     trans_matrix[r*n+i] = -rules.c[r];
     //     if (j<n) trans_matrix[r*n+j] = rules.p[r];
     // }
-
+        
     for (int r = rule_index[i]; r < rule_index[i+1]; r++) {
         //forgeting rules are not stored in trans_mx. 
+        
         if(rules.p[r]>0){
             trans_matrix[z_vector[r]*m*2+r*2] = j;
             trans_matrix[(z_vector[r]*m*2+r*2)+1] = rules.p[r];

@@ -36,12 +36,14 @@ SNP_model::SNP_model(uint n, uint m, int mode, int verbosity)
     this->n = n;  // number of neurons
     this->ex_mode = mode;
     this->verbosity = verbosity;
+    write_CSV = true;
     this->step = 0;
     if(write_CSV){
         this->csv.open("conf_vs.csv");
     }
     cudaStreamCreate(&this->stream1);
-    CHECK_CUDA(cudaStreamCreateWithFlags(&this->stream2, cudaStreamNonBlocking));
+    cudaStreamCreate(&this->stream2);
+    //CHECK_CUDA(cudaStreamCreateWithFlags(&this->stream2, cudaStreamNonBlocking)); TODO: usar para cublas y cusparse
     
     cudaMallocHost(&this->conf_vector, sizeof(int)*n);
     memset(this->conf_vector,   0,  sizeof(int)*n);
@@ -114,6 +116,35 @@ SNP_model::SNP_model(uint n, uint m, int mode, int verbosity)
 /** Free mem */
 SNP_model::~SNP_model()
 {
+    //////////////////////////////////MEMORY USAGE
+    size_t free_byte ;
+
+    size_t total_byte ;
+
+    cuda_status = cudaMemGetInfo( &free_byte, &total_byte ) ;
+
+    if ( cudaSuccess != cuda_status ){
+
+        printf("Error: cudaMemGetInfo fails, %s \n", cudaGetErrorString(cuda_status) );
+
+        exit(1);
+
+    }
+
+    double free_db = (double)free_byte ;
+
+    double total_db = (double)total_byte ;
+
+    double used_db = total_db - free_db ;
+
+    printf("GPU memory usage: used = %f, free = %f MB, total = %f MB\n",
+
+        used_db/1024.0/1024.0, free_db/1024.0/1024.0, total_db/1024.0/1024.0);
+
+    ////////////////////////////////////
+
+
+
     cudaFree(this->d_conf_vector_cpy);
     if(ex_mode ==GPU_CUBLAS || ex_mode ==GPU_CUSPARSE){
         free(this->cublas_conf_vector);
@@ -298,7 +329,7 @@ void SNP_model::printDelaysV(){
 
 void SNP_model::printConfV(){
     if(this->csv){
-        this->csv << std:format("Step #{%d}",this->step);
+        this->csv << "Step " + this->step + "\n";
     }
     
     printf("conf_vector= ");
@@ -306,18 +337,24 @@ void SNP_model::printConfV(){
         for(int i=0; i< n; i++){
             printf("{%.0f}",cublas_conf_vector[i]);
             if(this->csv){
-                csv<< std::format("{%.0f},",cublas_conf_vector[i]);
+                csv<< std::to_string(cublas_conf_vector[i]) + ",";
             }
             
+        }
+        if(this->csv){
+            csv<<"<\n";
         }
     }else{
         for(int i=0; i< n; i++){
             printf("{%d}",conf_vector[i]);
 
             if(this->csv){
-                csv<< std::format("{%d},",conf_vector[i]);
+                csv<< std::to_string(conf_vector[i]) + ",";
             }
             
+        }
+        if(this->csv){
+            csv<<"<\n";
         }   
 
     }
@@ -353,7 +390,7 @@ __global__ void does_it_calc_nxt(bool * calc_nxt, int* spkv, int spkv_size, int 
 
 __global__ void printVectorsK(float* spkv, float* spkv_aux, int spkv_size, int * delays, int neurons, int verbosity){
 
-    if(verbosity>=3){
+    
         printf("Spiking_vector:");
         for(int i=0; i<spkv_size; i++){
             printf("%.1f ",spkv[i]);
@@ -374,7 +411,7 @@ __global__ void printVectorsK(float* spkv, float* spkv_aux, int spkv_size, int *
         printf("\n");
         
 
-    }
+    
 
 }
 
@@ -499,17 +536,16 @@ bool SNP_model::transition_step()
         
         if(this->verbosity>=2){
             cudaStreamSynchronize(this->stream1);
-            printConfV(this->write_CSV);
+            printConfV();
             printf("\n---------------------------------------\n");
         }
 
         if(ex_mode == GPU_CUBLAS || ex_mode ==GPU_CUSPARSE){
-            
-            printVectorsK<<<1,1>>>(d_cublas_spiking_vector, d_cublas_spiking_vector_aux,spv_size, d_delays_vector, n, verbosity);
-        }//else, print is located in static_*.cu
+            if(verbosity>=3){
+                printVectorsK<<<1,1>>>(d_cublas_spiking_vector, d_cublas_spiking_vector_aux,spv_size, d_delays_vector, n, verbosity);
 
-        
-        
+            }
+        }//else, print is located in static_*.cu
 
 
         if((verbosity>=3 && (ex_mode==GPU_CUBLAS || ex_mode == GPU_CUSPARSE)) || (verbosity>=3 && !transMX_printed)){

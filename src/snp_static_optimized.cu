@@ -62,6 +62,7 @@ void SNP_static_optimized::printTransMX(){
 
 void SNP_static_optimized::include_synapse(uint i, uint j)
 {
+    //TODO: almacenar por columnas. Para ello hallar maximo numero de elementos en una columna
     trans_matrix[z_vector[i]*n+i] = j;
     z_vector[i]++;
     
