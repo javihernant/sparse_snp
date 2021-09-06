@@ -74,7 +74,7 @@ __global__ void cusparse_gen_CSR_vectors(int * trans_matrix, int nrows, int ncol
 }
 
 /** Allocation */
-SNP_static_cusparse::SNP_static_cusparse(uint n, uint m, int mode, int verbosity) : SNP_model(n,m, mode, verbosity){
+SNP_static_cusparse::SNP_static_cusparse(uint n, uint m, int mode, int verbosity, bool write2csv, int repetition) : SNP_model(n,m, mode, verbosity, write2csv, repetition){
 
     CHECK_CUSPARSE(cusparseCreate(&(this->cusparse_handle)));
 

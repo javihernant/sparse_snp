@@ -6,6 +6,9 @@
 #include <snp_static.hpp>
 #include <math.h>
 #include <iostream>
+#include <unistd.h>
+
+       
 
 // Algorithms
 #define CPU      		0
@@ -101,11 +104,11 @@
 	
 // }
 
-void testOrdenarNums(int* nums, int size, int verbosity){
+void testOrdenarNums(int* nums, int size, int verbosity, bool write2csv){
 	int n= size*3; //number of neurons is number of numbers * 3 layers. 
 	int m = size + size*size; //each neuron in the first layer has one rule. Each neuron in the second layer has size (of the array of nums to be sorted) rules. There are "size" neurons in each layer (input, second, output).
 
-	SNP_static_optimized TestModel(n, m, GPU_OPTIMIZED, verbosity);
+	SNP_static_optimized TestModel(n, m, GPU_OPTIMIZED, verbosity, write2csv);
 	//set spikes of neurons in first layer and add their rules
 	for(int i=0; i<size; i++){
 		TestModel.set_spikes (i, nums[i]);
@@ -164,13 +167,13 @@ void testOrdenarNums(int* nums, int size, int verbosity){
 	
 // }
 
-void testDelays(int verbosity){
+void testDelays(int verbosity, int write2csv){
 	
 	//Loading one SNP model
 	uint m = 5; //num reglas
 	uint n = 3; //num neuronas
 	
-	SNP_static_optimized TestModel(n, m, GPU_OPTIMIZED, verbosity);
+	SNP_static_optimized TestModel(n, m, GPU_OPTIMIZED, verbosity, write2csv);
 	int C0[3] = {0,1,1};
 	for (int i=0; i<n; i++){
 		TestModel.set_spikes (i, C0[i]);
@@ -206,7 +209,7 @@ void testDelays(int verbosity){
 
 }
 
-void testSubsetSumNonUniformDelays(int S, int * v, int v_size, int verbosity, int repetition){
+void testSubsetSumNonUniformDelays(int S, int * v, int v_size, int verbosity, bool write2csv, int repetition){
 
 	if(verbosity>=1){
 		printf("test repetition #%d\n",repetition);
@@ -220,7 +223,7 @@ void testSubsetSumNonUniformDelays(int S, int * v, int v_size, int verbosity, in
 	uint m = v_size*2*2 + sum_of_v + 2; //num reglas
 	
 	
-	SNP_static TestModel(n, m, GPU_SPARSE, verbosity);
+	SNP_static TestModel(n, m, GPU_SPARSE, verbosity, write2csv, repetition);
 
 	for (int i=0; i<v_size+1; i++){
 		TestModel.set_spikes (i, 1);
@@ -312,60 +315,74 @@ int main(int argc, char* argv[])
 	//lo anterior + spiking vectors, delays, trans_MX etc.
 
 	int verbosity = 0;
-	if(argc>1){
-		if (strcmp(argv[1],"--verbosity=1")==0) {
-			verbosity=1;
-		}
+	bool write2csv=false;
+	int opt;
 
-		if (strcmp(argv[1],"--verbosity=2")==0) {
-			verbosity=2;
-		}
-
-		if (strcmp(argv[1],"--verbosity=3")==0) {
-			verbosity=3;
-		}
+	while ((opt = getopt(argc, argv, "fv:")) != -1) {
+		switch (opt) {
+               case 'f':
+                   write2csv = true;
+                   break;
+               case 'v':
+                   verbosity = atoi(optarg);
+                   break;
+               default: /* '?' */
+                   fprintf(stderr, "Usage: %s [-f] [-v verbositylevel] \n",
+                           argv[0]);
+                   exit(EXIT_FAILURE);
+               }
+           
 
 	}
+	if(write2csv){
+		system("rm -r csv_solutions/*");
+	}
 
-	int numOfRepetitions = 100;
-	int v_size = 10;
-	int v[v_size];
-	int S=0;
-	int seed = 28;
-	std::srand(seed);
-	for(int i=0; i<v_size; i++){
+	if(write2csv && verbosity==0){
+		verbosity=1;
+	}
+	
+
+	/////////////////Subset Sum//////////////////////
+	// int numOfRepetitions = 100;
+	// int v_size = 10;
+	// int v[v_size];
+	// int S=0;
+	// int seed = 28;
+	// std::srand(seed);
+	// for(int i=0; i<v_size; i++){
 		
-		v[i] = ( 1+ std::rand() % ( 10 + 1 ) ); //generates a number in the range 0-10
+	// 	v[i] = ( 1+ std::rand() % ( 10 + 1 ) ); //generates a number in the range 0-10
 
 
-		if((std::rand() % 100)<20){ //20% of the time the element will be chosen for the total sum (S)
-			S+=v[i];
-		}
-	}
-
-	for (int i=0; i<numOfRepetitions; i++){
-		testSubsetSumNonUniformDelays(S, v, v_size, verbosity, i);
-	}    
-	
-	
-	// testDelays(verbosity);
-
-	// int size = 10;
-	// int nums[size];
-	// for (int i=size; i>0; i--){
-	// 	nums[size-i]=i;
+	// 	if((std::rand() % 100)<20){ //20% of the time the element will be chosen for the total sum (S)
+	// 		S+=v[i];
+	// 	}
 	// }
-	// testOrdenarNums(nums,size, debug);
 
-	
+	// for (int i=0; i<numOfRepetitions; i++){
+	// 	testSubsetSumNonUniformDelays(S, v, v_size, verbosity, write2csv, i);
+	// }    
+	////////////////////////////////////////////////
 
+	/////////////////Test Delays//////////////////////	
 	
+	// testDelays(verbosity,write2csv);
 
-	/////////////////////
+	//////////////////////////////////////////////////
+
+	/////////////////Sorting numbers//////////////////////	
+	int size = 100;
+	int nums[size];
+	for (int i=size; i>0; i--){
+		nums[size-i]=i;
+	}
+	testOrdenarNums(nums,size, debug,write2csv);
+	/////////////////////////////////////////////////////
 	
-	int n = 12;
-	char* file=NULL;
-	int algorithm = CPU;
+	// int n = 12;
+	// char* file=NULL;
+	// int algorithm = CPU;
 	//int seed = time(NULL);
 
 	
@@ -385,13 +402,13 @@ int main(int argc, char* argv[])
 	// 	return 0;
 	// }
 		
-	if (argc>1) {
-		file = argv[1];	
-	}
+	// if (argc>1) {
+	// 	file = argv[1];	
+	// }
 	
-	if (argc>2) {
-		algorithm = atoi(argv[2])-1;
-	}
+	// if (argc>2) {
+	// 	algorithm = atoi(argv[2])-1;
+	// }
 	// Read the input file
 
 	

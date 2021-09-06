@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <assert.h> //#define assert
 #include <cuda.h>
-#include <format>
+
 
 #include <snp_model.hpp>  // "../include/snp_model.hpp" //
 // Algorithms
@@ -27,19 +27,24 @@ using namespace std;
 
 /** Allocation */
 
-SNP_model::SNP_model(uint n, uint m, int mode, int verbosity)
+SNP_model::SNP_model(uint n, uint m, int mode, int verbosity, bool write2csv, int repetition)
 {
-    
     cudaProfilerStart();
+    
+    CHECK_CUDA(cudaEventCreate(&this->start));
+    CHECK_CUDA(cudaEventCreate(&this->stop));
+    CHECK_CUDA(cudaEventRecord(this->start, 0));   
+    
     // allocation in CPU
     this->m = m;  // number of rules
     this->n = n;  // number of neurons
     this->ex_mode = mode;
     this->verbosity = verbosity;
-    write_CSV = true;
+    this->write_CSV = write2csv;
     this->step = 0;
+    
     if(write_CSV){
-        this->csv.open("conf_vs.csv");
+        this->csv.open("csv_solutions/conf_vs"+to_string(repetition)+".csv");
     }
     cudaStreamCreate(&this->stream1);
     cudaStreamCreate(&this->stream2);
@@ -116,10 +121,21 @@ SNP_model::SNP_model(uint n, uint m, int mode, int verbosity)
 /** Free mem */
 SNP_model::~SNP_model()
 {
-    //////////////////////////////////MEMORY USAGE
+    CHECK_CUDA(cudaEventRecord(stop, 0));
+    CHECK_CUDA(cudaEventSynchronize (stop) );
+
+    CHECK_CUDA(cudaEventElapsedTime(&this->elapsed, start, stop) );
+
+    CHECK_CUDA(cudaEventDestroy(this->start));
+    CHECK_CUDA(cudaEventDestroy(this->stop));
+
+    printf("The elapsed time in gpu was %.2f ms", elapsed);
+    
+    //MEMORY USAGE
     size_t free_byte ;
 
     size_t total_byte ;
+    cudaError_t cuda_status;
 
     cuda_status = cudaMemGetInfo( &free_byte, &total_byte ) ;
 
@@ -329,7 +345,7 @@ void SNP_model::printDelaysV(){
 
 void SNP_model::printConfV(){
     if(this->csv){
-        this->csv << "Step " + this->step + "\n";
+        this->csv << "Step " + to_string(this->step) + "\n";
     }
     
     printf("conf_vector= ");
@@ -342,7 +358,7 @@ void SNP_model::printConfV(){
             
         }
         if(this->csv){
-            csv<<"<\n";
+            csv<<"\n";
         }
     }else{
         for(int i=0; i< n; i++){
@@ -354,7 +370,7 @@ void SNP_model::printConfV(){
             
         }
         if(this->csv){
-            csv<<"<\n";
+            csv<<"\n";
         }   
 
     }

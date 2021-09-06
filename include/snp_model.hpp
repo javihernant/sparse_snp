@@ -19,7 +19,7 @@ class SNP_model
 {
 public:
     
-    SNP_model(uint n, uint m, int mode, int verbosity);
+    SNP_model(uint n, uint m, int mode, int verbosity, bool write2csv, int repetition);
     ~SNP_model();
 
     /** 
@@ -113,6 +113,11 @@ protected:
     bool gpu_updated =0;           // true if GPU copy is updated
     bool cpu_updated =0;           // true if CPU copy is updated
     bool done_rules = 0;            // true if all rules have been introduced (preventing adding synapses)
+    bool write_CSV;
+
+    // Auxiliary variables
+    float elapsed = 0;
+    cudaEvent_t start, stop;
 
     // auxiliary methods
     void printSpikingV();

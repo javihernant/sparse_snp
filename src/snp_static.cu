@@ -10,7 +10,7 @@
 using namespace std;
 
 /** Allocation */
-SNP_static::SNP_static(uint n, uint m, int mode, int verbosity) : SNP_model(n,m, mode, verbosity)
+SNP_static::SNP_static(uint n, uint m, int mode, int verbosity, bool write2csv, int repetition) : SNP_model(n,m, mode, verbosity, write2csv, repetition)
 {
     //Allocate cpu variables
     this -> spiking_vector = (int*) malloc(sizeof(int)*m);
@@ -132,11 +132,12 @@ __global__ void kalc_transition(int* spiking_vector, int* trans_matrix, int* con
     //nid<n
     if (nid<n && delays_vector[nid]==0){
         for (int r=0; r<m; r++){
+            conf_vector[nid] += spiking_vector[r] * trans_matrix[r*n+nid]; 
+            spiking_vector[r] = 0; //disable rule that has been used
             //only sum spikes from neurons that are open, even though spiking_vector[r]=1. TODO: In cublas make trans_matrix_copy and make 0 every row of every rule corresponding to a closed neuron.
-            if(delays_vector[rnid[r]] == 0){ 
-                conf_vector[nid] += spiking_vector[r] * trans_matrix[r*n+nid]; 
-                spiking_vector[r] = 0; //disable rule that has been used
-            }
+            // if(delays_vector[rnid[r]] == 0){ 
+                
+            // }
             
         }
 

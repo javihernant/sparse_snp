@@ -20,7 +20,7 @@ void checkErr2(cudaError_t err) {
 }
 
 /** Allocation */
-SNP_static_cublas::SNP_static_cublas(uint n, uint m, int mode, int verbosity) : SNP_model(n,m, mode, verbosity)
+SNP_static_cublas::SNP_static_cublas(uint n, uint m, int mode, int verbosity, bool write2csv, int repetition) : SNP_model(n,m, mode, verbosity, write2csv, repetition)
 {
     cublasCreate(&(this->handle));
     cublasSetStream(this->handle, this->stream2);

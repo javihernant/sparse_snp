@@ -2,7 +2,7 @@ ODIR = obj
 SDIR = src
 LDIR = lib
 BDIR = bin
-IDIR = include
+IDIR = include 
 dbg=1
 
 CC=g++
@@ -32,6 +32,7 @@ GENCODE_SM50    := -gencode arch=compute_50,code=\"sm_50,compute_50\"
 GENCODE_FLAGS   := $(GENCODE_SM20) $(GENCODE_SM35) $(GENCODE_SM60)\
                    $(GENCODE_SM61) $(GENCODE_SM75) $(GENCODE_SM50)
 #NCFlags=-c --compiler-options -Wall -Xcompiler $(OMP) $(GENCODE_FLAGS)
+
 NCFlags=-c $(GENCODE_FLAGS) -I$(CUDA_PATH)/targets/x86_64-linux/include
 NLDFlags=-lm -lcublas -lcusparse -Xcompiler $(OMP) -L$(CUDA_PATH)/lib64
 ############
@@ -61,7 +62,7 @@ $(BIN): $(patsubst %,$(ODIR)/%,$(OBJ))
 
 %.o: $(SDIR)/%.cpp
 	@mkdir -p $(ODIR)
-	$(CC) $(CFlags) -I$(IDIR) -o $(ODIR)/$@ $<
+	$(CC) $(CFlags) -I$(IDIR) -I$(CUDA_PATH)/targets/x86_64-linux/include -o $(ODIR)/$@ $<
 
 %.o: $(SDIR)/%.cu
 	@mkdir -p $(ODIR)

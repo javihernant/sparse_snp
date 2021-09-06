@@ -8,7 +8,7 @@
 class SNP_static: public SNP_model
 {
 public:
-    SNP_static(uint n, uint m, int mode, int verbosity);
+    SNP_static(uint n, uint m, int mode, int verbosity, bool write2csv, int repetition=0);
     ~SNP_static();
     
 
@@ -25,7 +25,7 @@ protected:
 class SNP_static_ell: public SNP_model
 {
 public:
-    SNP_static_ell(uint n, uint m, int mode, int verbosity);
+    SNP_static_ell(uint n, uint m, int mode, int verbosity, bool write2csv, int repetition=0);
     ~SNP_static_ell();
 
 protected:
@@ -40,7 +40,7 @@ protected:
 class SNP_static_optimized: public SNP_model
 {
 public:
-    SNP_static_optimized(uint n, uint m, int mode, int verbosity);
+    SNP_static_optimized(uint n, uint m, int mode, int verbosity, bool write2csv, int repetition=0);
     ~SNP_static_optimized();
 
 protected:
@@ -56,7 +56,7 @@ protected:
 class SNP_static_cublas: public SNP_model
 {
 public:
-    SNP_static_cublas(uint n, uint m, int mode, int verbosity);
+    SNP_static_cublas(uint n, uint m, int mode, int verbosity, bool write2csv, int repetition=0);
     ~SNP_static_cublas();
     
 
@@ -74,7 +74,7 @@ protected:
 class SNP_static_cusparse: public SNP_model
 {
 public:
-    SNP_static_cusparse(uint n, uint m, int mode, int verbosity);
+    SNP_static_cusparse(uint n, uint m, int mode, int verbosity, bool write2csv, int repetition=0);
     ~SNP_static_cusparse();
     
 

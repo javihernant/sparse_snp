@@ -11,7 +11,7 @@ using namespace std;
 
 
 /** Allocation */
-SNP_static_ell::SNP_static_ell(uint n, uint m, int mode, int verbosity) : SNP_model(n,m, mode, verbosity)
+SNP_static_ell::SNP_static_ell(uint n, uint m, int mode, int verbosity, bool write2csv, int repetition) : SNP_model(n,m, mode, verbosity, write2csv, repetition)
 {
     //Allocate cpu variables
     this -> spiking_vector = (int*) malloc(sizeof(int)*m);
