@@ -332,7 +332,7 @@ int main(int argc, char* argv[])
 
 	int verbosity = 0;
 	bool write2csv=false;
-	int opt;
+	int opt, mode;
 
 	while ((opt = getopt(argc, argv, "fv:")) != -1) {
 		switch (opt) {

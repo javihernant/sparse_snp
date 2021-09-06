@@ -28,7 +28,7 @@ NCC=nvcc -ccbin=$(CC)
 GENCODE_SM50    := -gencode arch=compute_50,code=\"sm_50,compute_50\"
 #GENCODE_SM60    := -gencode arch=compute_60,code=\"sm_60,compute_60\"
 #GENCODE_SM61    := -gencode arch=compute_61,code=\"sm_61,compute_61\"
-#GENCODE_SM75    := -gencode arch=compute_75,code=\"sm_75,compute_75\"
+GENCODE_SM75    := -gencode arch=compute_75,code=\"sm_75,compute_75\"
 GENCODE_FLAGS   := $(GENCODE_SM20) $(GENCODE_SM35) $(GENCODE_SM60)\
                    $(GENCODE_SM61) $(GENCODE_SM75) $(GENCODE_SM50)
 #NCFlags=-c --compiler-options -Wall -Xcompiler $(OMP) $(GENCODE_FLAGS)
