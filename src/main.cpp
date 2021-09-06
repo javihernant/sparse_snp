@@ -377,7 +377,7 @@ int main(int argc, char* argv[])
 	for (int i=size; i>0; i--){
 		nums[size-i]=i;
 	}
-	testOrdenarNums(nums,size, debug,write2csv);
+	testOrdenarNums(nums,size, verbosity,write2csv);
 	/////////////////////////////////////////////////////
 	
 	// int n = 12;
