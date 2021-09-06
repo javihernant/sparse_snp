@@ -129,7 +129,7 @@ SNP_model::~SNP_model()
     CHECK_CUDA(cudaEventDestroy(this->start));
     CHECK_CUDA(cudaEventDestroy(this->stop));
 
-    printf("The elapsed time in gpu was %.2f ms", elapsed);
+    printf("The elapsed time in gpu was %.2f ms\n", elapsed);
     
     //MEMORY USAGE
     size_t free_byte ;
@@ -153,7 +153,7 @@ SNP_model::~SNP_model()
 
     double used_db = total_db - free_db ;
 
-    printf("GPU memory usage: used = %f, free = %f MB, total = %f MB\n",
+    printf("GPU memory usage: used = %f MB, free = %f MB, total = %f MB\n",
 
         used_db/1024.0/1024.0, free_db/1024.0/1024.0, total_db/1024.0/1024.0);
 

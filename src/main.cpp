@@ -10,7 +10,7 @@
 
        
 
-// Algorithms
+//Simulator modes
 #define CPU      		0
 #define GPU_SPARSE		1
 #define GPU_ELL 		2
@@ -104,9 +104,25 @@
 	
 // }
 
-void testOrdenarNums(int* nums, int size, int verbosity, bool write2csv){
+void testOrdenarNums(int* nums, int size, int verbosity, bool write2csv, int mode){
 	int n= size*3; //number of neurons is number of numbers * 3 layers. 
 	int m = size + size*size; //each neuron in the first layer has one rule. Each neuron in the second layer has size (of the array of nums to be sorted) rules. There are "size" neurons in each layer (input, second, output).
+
+	switch(){
+		case GPU_SPARSE:
+			SNP_static TestModel(n, m, GPU_OPTIMIZED, verbosity, write2csv);
+			break;
+		case GPU_ELL:
+			SNP_static_ell TestModel(n, m, GPU_OPTIMIZED, verbosity, write2csv);
+			break;
+		case GPU_OPTIMIZED:
+			SNP_static_optimized TestModel(n, m, GPU_OPTIMIZED, verbosity, write2csv);
+			break;
+		default:
+			SNP_static TestModel(n, m, GPU_OPTIMIZED, verbosity, write2csv);
+			
+
+	}
 
 	SNP_static_optimized TestModel(n, m, GPU_OPTIMIZED, verbosity, write2csv);
 	//set spikes of neurons in first layer and add their rules
@@ -326,8 +342,10 @@ int main(int argc, char* argv[])
                case 'v':
                    verbosity = atoi(optarg);
                    break;
+			   case 'm':
+			   		mode = atoi(optarg);
                default: /* '?' */
-                   fprintf(stderr, "Usage: %s [-f] [-v verbositylevel] \n",
+                   fprintf(stderr, "Usage: %s [-f] [-v verbositylevel] [-m mode]\n",
                            argv[0]);
                    exit(EXIT_FAILURE);
                }
@@ -377,7 +395,7 @@ int main(int argc, char* argv[])
 	for (int i=size; i>0; i--){
 		nums[size-i]=i;
 	}
-	testOrdenarNums(nums,size, verbosity,write2csv);
+	testOrdenarNums(nums,size, verbosity,write2csv, mode);
 	/////////////////////////////////////////////////////
 	
 	// int n = 12;
