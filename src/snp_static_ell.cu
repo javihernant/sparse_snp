@@ -25,7 +25,7 @@ SNP_static_ell::SNP_static_ell(uint n, uint m, int mode, int verbosity, bool wri
 
     //Allocate device variables
     cudaMalloc((&this->d_spiking_vector),  sizeof(int)*m);
-    cudaMemset(&this->d_spiking_vector, 0, sizeof(int)*m);
+    cudaMemset(this->d_spiking_vector, 0, sizeof(int)*m);
     //trans_matrix allocated when z is known
 
 }
@@ -150,8 +150,9 @@ __global__ void kalc_transition_ell(int* spiking_vector, int* trans_matrix, int*
     if (rid<m && spiking_vector[rid]>0 && delays_vector[rnid[rid]]==0){
         spiking_vector[rid] = 0;
         for(int i=0; i<z; i++){
-            int neuron = trans_matrix[m*2*i+rid*2];
-            int value = trans_matrix[m*2*i+rid*2+1];
+            int neuron = trans_matrix[i*m*2+rid*2];
+            int value = trans_matrix[i*m*2+rid*2+1];
+            
             if(neuron==-1 && value==-1){
                 break;
             }
@@ -181,7 +182,11 @@ void SNP_static_ell::calc_transition()
     if(verbosity>=3){
         printVectors_ell_K<<<1,1,0,this->stream2>>>(d_spiking_vector, m, d_delays_vector, n);
     }
-    kalc_transition_ell<<<n+255,256,0,this->stream2>>>(d_spiking_vector,d_trans_matrix, d_conf_vector, d_delays_vector, d_rules.nid,z,m);
+    int num_threads = m;
+    if(num_threads>256){
+
+    }
+    kalc_transition_ell<<<(m+255)/256,256,0,this->stream2>>>(d_spiking_vector,d_trans_matrix, d_conf_vector, d_delays_vector, d_rules.nid,z,m);
     
     update_delays_vector<<<n+255,256,0,this->stream2>>>(d_delays_vector, n);
     

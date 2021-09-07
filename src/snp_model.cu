@@ -542,7 +542,7 @@ bool SNP_model::transition_step()
     
         cudaStreamSynchronize(this->stream2);
     }else{
-        cudaMemcpy(this->calc_next_trans, this->d_calc_next_trans, sizeof(bool),cudaMemcpyDeviceToHost); ///////////////
+        cudaMemcpy(this->calc_next_trans, this->d_calc_next_trans, sizeof(bool),cudaMemcpyDeviceToHost); /////////
     }
     
 

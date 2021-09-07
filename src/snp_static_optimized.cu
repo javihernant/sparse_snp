@@ -43,6 +43,8 @@ SNP_static_optimized::SNP_static_optimized(uint n, uint m, int mode, int verbosi
 /** Free mem */
 SNP_static_optimized::~SNP_static_optimized()
 {
+    // cudaFree(this->spiking_vector);
+    // cudaFree(this->d_spiking_vector);
     free(this->trans_matrix);
     // cudaFree(this->d_trans_matrix);
     cudaFree(this->d_trans_matrix);
@@ -80,7 +82,7 @@ void SNP_static_optimized::load_transition_matrix ()
     }
 
     this-> trans_matrix = (int *) realloc(this->trans_matrix,sizeof(int)*n*z);
-    cudaMalloc((&this->d_trans_matrix),  sizeof(int)*n*z);
+    cudaMalloc((void **)&this->d_trans_matrix,  sizeof(int)*n*z);
     cudaMemcpy(d_trans_matrix,  trans_matrix,   sizeof(int)*n*z,  cudaMemcpyHostToDevice);
      
 

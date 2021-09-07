@@ -108,26 +108,26 @@ void testOrdenarNums(int* nums, int size, int verbosity, bool write2csv, int mod
 	int n= size*3; //number of neurons is number of numbers * 3 layers. 
 	int m = size + size*size; //each neuron in the first layer has one rule. Each neuron in the second layer has size (of the array of nums to be sorted) rules. There are "size" neurons in each layer (input, second, output).
 
-	switch(){
-		case GPU_SPARSE:
-			SNP_static TestModel(n, m, GPU_OPTIMIZED, verbosity, write2csv);
-			break;
-		case GPU_ELL:
-			SNP_static_ell TestModel(n, m, GPU_OPTIMIZED, verbosity, write2csv);
-			break;
-		case GPU_OPTIMIZED:
-			SNP_static_optimized TestModel(n, m, GPU_OPTIMIZED, verbosity, write2csv);
-			break;
-		default:
-			SNP_static TestModel(n, m, GPU_OPTIMIZED, verbosity, write2csv);
+	// switch(){
+	// 	case GPU_SPARSE:
+	// 		SNP_static TestModel(n, m, GPU_OPTIMIZED, verbosity, write2csv);
+	// 		break;
+	// 	case GPU_ELL:
+	// 		SNP_static_ell TestModel(n, m, GPU_OPTIMIZED, verbosity, write2csv);
+	// 		break;
+	// 	case GPU_OPTIMIZED:
+	// 		SNP_static_optimized TestModel(n, m, GPU_OPTIMIZED, verbosity, write2csv);
+	// 		break;
+	// 	default:
+	// 		SNP_static TestModel(n, m, GPU_OPTIMIZED, verbosity, write2csv);
 			
 
-	}
+	// }
 
-	SNP_static_optimized TestModel(n, m, GPU_OPTIMIZED, verbosity, write2csv);
+	SNP_static_ell TestModel(n, m, GPU_ELL, verbosity, write2csv);
 	//set spikes of neurons in first layer and add their rules
 	for(int i=0; i<size; i++){
-		TestModel.set_spikes (i, nums[i]);
+		TestModel.set_spikes(i, nums[i]);
 		//add_rule (uint nid, uchar e_n, uchar e_i, uchar c, uchar p) 
 		TestModel.add_rule(i, 1, 0, 1, 1,0);	
 	}
@@ -170,7 +170,7 @@ void testOrdenarNums(int* nums, int size, int verbosity, bool write2csv, int mod
 	// printf("\n\n");
 	// ///////////////////////////////////////////////////
 	
-	TestModel.compute(500); 
+	TestModel.compute(1); 
 	
 
 }
@@ -189,7 +189,7 @@ void testDelays(int verbosity, int write2csv){
 	uint m = 5; //num reglas
 	uint n = 3; //num neuronas
 	
-	SNP_static_optimized TestModel(n, m, GPU_OPTIMIZED, verbosity, write2csv);
+	SNP_static TestModel(n, m, GPU_SPARSE, verbosity, write2csv);
 	int C0[3] = {0,1,1};
 	for (int i=0; i<n; i++){
 		TestModel.set_spikes (i, C0[i]);
@@ -390,7 +390,7 @@ int main(int argc, char* argv[])
 	//////////////////////////////////////////////////
 
 	/////////////////Sorting numbers//////////////////////	
-	int size = 100;
+	int size = 50;
 	int nums[size];
 	for (int i=size; i>0; i--){
 		nums[size-i]=i;

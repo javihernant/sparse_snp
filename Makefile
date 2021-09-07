@@ -20,7 +20,7 @@ CFlags=-c $(OMP) #-Wall
 LDFlags=-lm -lcublas -lcusparse $(OMP) 
 
 ############ NVIDIA specifics
-CUDA_PATH=/usr/local/cuda-11.4
+CUDA_PATH=/usr/local/cuda-11.3
 
 NCC=nvcc -ccbin=$(CC)
 #GENCODE_SM20    := -gencode arch=compute_20,code=\"sm_20,compute_20\"
