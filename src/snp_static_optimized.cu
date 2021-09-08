@@ -73,16 +73,16 @@ void SNP_static_optimized::include_synapse(uint i, uint j)
 
 void SNP_static_optimized::load_transition_matrix () 
 {
-    int z_aux;
+    int z = 0;
     for(int i=0; i<n; i++){
-        z_aux = z_vector[i];
+        int z_aux = z_vector[i];
         if(z_aux>z){
             z = z_aux;    
         }
     }
 
     this-> trans_matrix = (int *) realloc(this->trans_matrix,sizeof(int)*n*z);
-    cudaMalloc((void **)&this->d_trans_matrix,  sizeof(int)*n*z);
+    CHECK_CUDA(cudaMalloc((void **)&this->d_trans_matrix,  sizeof(int)*n*z));
     cudaMemcpy(d_trans_matrix,  trans_matrix,   sizeof(int)*n*z,  cudaMemcpyHostToDevice);
      
 

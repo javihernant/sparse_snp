@@ -27,6 +27,7 @@ SNP_static_ell::SNP_static_ell(uint n, uint m, int mode, int verbosity, bool wri
     cudaMalloc((&this->d_spiking_vector),  sizeof(int)*m);
     cudaMemset(this->d_spiking_vector, 0, sizeof(int)*m);
     //trans_matrix allocated when z is known
+    cudaMalloc(&this->d_trans_matrix ,sizeof(int)*n*m*2);
 
 }
 
@@ -64,8 +65,8 @@ void SNP_static_ell::include_synapse(uint i, uint j)
         //forgeting rules are not stored in trans_mx. 
         
         if(rules.p[r]>0){
-            trans_matrix[z_vector[r]*m*2+r*2] = j;
-            trans_matrix[(z_vector[r]*m*2+r*2)+1] = rules.p[r];
+            trans_matrix[z_vector[r]*(m*2)+r*2] = j;
+            trans_matrix[z_vector[r]*(m*2)+(r*2)+1] = rules.p[r];
             z_vector[r]++;
         }
         
@@ -77,16 +78,16 @@ void SNP_static_ell::include_synapse(uint i, uint j)
 void SNP_static_ell::load_transition_matrix () 
 {
     //handled by sublcasses
-    
-    for(int r=0; r<m; r++){
-        int aux_z=z_vector[r];
-        if(aux_z>z){
-            z=aux_z;
-        }
-    }
+    // int max_z=0;
+    // for(int r=0; r<m; r++){
+    //     int aux_z=z_vector[r];
+    //     if(aux_z>max_z){
+    //         max_z=aux_z;
+    //     }
+    // }
 
-    cudaMalloc((&this->d_trans_matrix),  sizeof(int)*z*m*2);
-    cudaMemcpy(d_trans_matrix,  trans_matrix,   sizeof(int)*z*m*2,  cudaMemcpyHostToDevice); 
+    // cudaMalloc((&this->d_trans_matrix),  sizeof(int)*max_z*(m*2));
+    cudaMemcpy(d_trans_matrix,  trans_matrix,   sizeof(int)*n*(m*2),  cudaMemcpyHostToDevice); 
 
     // TODO The following should be done in another function, but for simplicity I put it here
     // TODO check if we need to set matrices for spiking and configuration vectors
@@ -150,8 +151,8 @@ __global__ void kalc_transition_ell(int* spiking_vector, int* trans_matrix, int*
     if (rid<m && spiking_vector[rid]>0 && delays_vector[rnid[rid]]==0){
         spiking_vector[rid] = 0;
         for(int i=0; i<z; i++){
-            int neuron = trans_matrix[i*m*2+rid*2];
-            int value = trans_matrix[i*m*2+rid*2+1];
+            int neuron = trans_matrix[i*(m*2)+rid*2];
+            int value = trans_matrix[i*(m*2)+(rid*2)+1];
             
             if(neuron==-1 && value==-1){
                 break;
